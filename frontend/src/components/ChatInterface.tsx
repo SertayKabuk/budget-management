@@ -101,26 +101,26 @@ export default function ChatInterface({ groupId, userId, userName }: Props) {
   };
 
   return (
-    <div className="flex flex-col h-[500px]">
-      <div className="flex items-center justify-between mb-4 pb-2 border-b">
-        <h3 className="text-lg font-semibold">{t.chat.title}</h3>
+    <div className="flex flex-col h-[400px] sm:h-[500px]">
+      <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
+        <h3 className="text-base sm:text-lg font-semibold">{t.chat.title}</h3>
         <div className="flex items-center gap-2">
           <div
-            className={`w-3 h-3 rounded-full ${
+            className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${
               isConnected ? 'bg-green-500' : 'bg-red-500'
             }`}
           />
-          <span className="text-sm text-gray-600">
+          <span className="text-xs sm:text-sm text-gray-600">
             {isConnected ? t.chat.connected : t.chat.disconnected}
           </span>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+      <div className="flex-1 overflow-y-auto mb-3 sm:mb-4 space-y-3 sm:space-y-4">
         {messages.length === 0 && (
           <div className="text-center text-gray-500 mt-8">
-            <p>{t.chat.emptyState}</p>
-            <p className="text-sm mt-2">
+            <p className="text-sm sm:text-base">{t.chat.emptyState}</p>
+            <p className="text-xs sm:text-sm mt-2">
               {t.chat.emptyStateTip}
             </p>
           </div>
@@ -132,13 +132,13 @@ export default function ChatInterface({ groupId, userId, userName }: Props) {
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[70%] rounded-lg px-4 py-2 ${
+              className={`max-w-[85%] sm:max-w-[70%] rounded-lg px-3 sm:px-4 py-2 ${
                 message.role === 'user'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-200 text-gray-900'
               }`}
             >
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              <p className="whitespace-pre-wrap text-sm sm:text-base">{message.content}</p>
               <p className="text-xs mt-1 opacity-70">
                 {new Date(message.timestamp).toLocaleTimeString()}
               </p>
@@ -154,13 +154,13 @@ export default function ChatInterface({ groupId, userId, userName }: Props) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={t.chat.placeholder}
-          className="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 p-2 sm:p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
           disabled={!isConnected}
         />
         <button
           type="submit"
           disabled={!isConnected || !input.trim()}
-          className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white px-6 py-3 rounded-lg font-medium"
+          className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base"
         >
           {t.chat.send}
         </button>

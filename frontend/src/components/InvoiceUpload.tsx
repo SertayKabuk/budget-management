@@ -108,75 +108,70 @@ export default function InvoiceUpload({ userId, groupId, onUploadSuccess }: Prop
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">{t.invoice.title}</h3>
-
-      <div className="space-y-4">
-        <div className="flex gap-2">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            {t.invoice.chooseFile}
-          </button>
-          <button
-            onClick={useCamera ? stopCamera : startCamera}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
-          >
-            {useCamera ? t.invoice.stopCamera : t.invoice.useCamera}
-          </button>
-        </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-
-        {useCamera && (
-          <div className="relative">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full max-w-md rounded border"
-              style={{ minHeight: '300px', backgroundColor: '#000' }}
-            />
-            <button
-              onClick={capturePhoto}
-              className="mt-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded"
-            >
-              {t.invoice.capturePhoto}
-            </button>
-          </div>
-        )}
-
-        {preview && (
-          <div className="space-y-2">
-            <img src={preview} alt="Preview" className="max-w-md rounded border" />
-            <div className="flex gap-2">
-              <button
-                onClick={handleUpload}
-                disabled={uploading}
-                className="bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white px-6 py-2 rounded"
-              >
-                {uploading ? t.invoice.uploading : t.invoice.upload}
-              </button>
-              <button
-                onClick={() => setPreview(null)}
-                className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded"
-              >
-                {t.invoice.cancel}
-              </button>
-            </div>
-          </div>
-        )}
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm sm:text-base"
+        >
+          {t.invoice.chooseFile}
+        </button>
+        <button
+          onClick={useCamera ? stopCamera : startCamera}
+          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm sm:text-base"
+        >
+          {useCamera ? t.invoice.stopCamera : t.invoice.useCamera}
+        </button>
       </div>
 
-      <div className="mt-4 text-sm text-gray-600">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      {useCamera && (
+        <div className="relative">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full max-w-full sm:max-w-md rounded border min-h-[200px] max-h-[400px] bg-black"
+          />
+          <button
+            onClick={capturePhoto}
+            className="mt-2 w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded text-base"
+          >
+            {t.invoice.capturePhoto}
+          </button>
+        </div>
+      )}
+
+      {preview && (
+        <div className="space-y-2">
+          <img src={preview} alt="Preview" className="w-full max-w-full sm:max-w-md rounded border" />
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={handleUpload}
+              disabled={uploading}
+              className="bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white px-6 py-3 rounded text-base"
+            >
+              {uploading ? t.invoice.uploading : t.invoice.upload}
+            </button>
+            <button
+              onClick={() => setPreview(null)}
+              className="bg-gray-300 hover:bg-gray-400 px-4 py-3 rounded text-base"
+            >
+              {t.invoice.cancel}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="text-xs sm:text-sm text-gray-600">
         <p>{t.invoice.tip}</p>
       </div>
     </div>
