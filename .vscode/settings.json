@@ -1,0 +1,19 @@
+{
+  "debug.javascript.autoAttachFilter": "onlyWithFlag",
+  "debug.javascript.breakOnConditionalError": true,
+  "debug.node.autoAttach": "disabled",
+  "debug.terminal.clearBeforeReusing": true,
+  
+  // TypeScript debugging
+  "typescript.tsdk": "node_modules/typescript/lib",
+  
+  // Better debugging for Socket.io
+  "debug.javascript.unmapMissingSources": true,
+  
+  // Recommended extensions for debugging
+  "recommendations": [
+    "ms-vscode.vscode-typescript-next",
+    "msjsdiag.debugger-for-chrome",
+    "Prisma.prisma"
+  ]
+}
