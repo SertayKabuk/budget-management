@@ -10,14 +10,15 @@ router.use(authenticateToken);
 router.get('/', async (req: Request, res: Response) => {
   try {
     const userId = req.jwtUser?.id;
+    const userRole = req.jwtUser?.role;
     
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    // Only return groups where the authenticated user is a member
+    // Admin users see all groups, regular users only see groups they're members of
     const groups = await prisma.group.findMany({
-      where: {
+      where: userRole === 'admin' ? {} : {
         members: {
           some: {
             userId: userId
@@ -47,21 +48,24 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.jwtUser?.id;
+    const userRole = req.jwtUser?.role;
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    // Verify user is a member of the group
-    const groupMembership = await prisma.groupMember.findFirst({
-      where: {
-        groupId: id,
-        userId: userId
-      }
-    });
+    // Admin users can access any group, regular users must be members
+    if (userRole !== 'admin') {
+      const groupMembership = await prisma.groupMember.findFirst({
+        where: {
+          groupId: id,
+          userId: userId
+        }
+      });
 
-    if (!groupMembership) {
-      return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      if (!groupMembership) {
+        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      }
     }
     
     const group = await prisma.group.findUnique({
@@ -96,21 +100,24 @@ router.get('/:id/summary', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.jwtUser?.id;
+    const userRole = req.jwtUser?.role;
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    // Verify user is a member of the group
-    const groupMembership = await prisma.groupMember.findFirst({
-      where: {
-        groupId: id,
-        userId: userId
-      }
-    });
+    // Admin users can access any group summary, regular users must be members
+    if (userRole !== 'admin') {
+      const groupMembership = await prisma.groupMember.findFirst({
+        where: {
+          groupId: id,
+          userId: userId
+        }
+      });
 
-    if (!groupMembership) {
-      return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      if (!groupMembership) {
+        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      }
     }
     
     const expenses = await prisma.expense.findMany({
@@ -170,6 +177,7 @@ router.post('/:id/members', async (req: Request, res: Response) => {
     const { id } = req.params;
     const { userId, role } = req.body;
     const authenticatedUserId = req.jwtUser?.id;
+    const authenticatedUserRole = req.jwtUser?.role;
 
     if (!authenticatedUserId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -179,16 +187,18 @@ router.post('/:id/members', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    // Verify authenticated user is a member of the group (and optionally check for admin role)
-    const groupMembership = await prisma.groupMember.findFirst({
-      where: {
-        groupId: id,
-        userId: authenticatedUserId
-      }
-    });
+    // Admin users can add members to any group, regular users must be members
+    if (authenticatedUserRole !== 'admin') {
+      const groupMembership = await prisma.groupMember.findFirst({
+        where: {
+          groupId: id,
+          userId: authenticatedUserId
+        }
+      });
 
-    if (!groupMembership) {
-      return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      if (!groupMembership) {
+        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      }
     }
 
     // Check if the user being added already exists
