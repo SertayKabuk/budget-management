@@ -51,18 +51,18 @@ export default function UserRoleManagementPage() {
   }
 
   return (
-    <div className="px-4 py-6">
-      <div className="mb-6">
-        <Link to="/admin" className="text-blue-600 hover:text-blue-800 mb-4 inline-block">
+    <div className="px-3 sm:px-4 py-4 sm:py-6">
+      <div className="mb-4 sm:mb-6">
+        <Link to="/admin" className="text-blue-600 hover:text-blue-800 mb-2 sm:mb-4 inline-block text-sm sm:text-base">
           {t.userRoles.backToAdmin}
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900">{t.userRoles.title}</h1>
-        <p className="text-gray-600 mt-2">{t.userRoles.subtitle}</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t.userRoles.title}</h1>
+        <p className="text-gray-600 mt-2 text-sm sm:text-base">{t.userRoles.subtitle}</p>
       </div>
 
       {message && (
         <div
-          className={`mb-6 p-4 rounded-lg ${
+          className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg text-sm sm:text-base ${
             message.type === 'success'
               ? 'bg-green-100 text-green-800 border border-green-200'
               : 'bg-red-100 text-red-800 border border-red-200'
@@ -72,7 +72,8 @@ export default function UserRoleManagementPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Desktop Table View - Hidden on Mobile */}
+      <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -156,9 +157,69 @@ export default function UserRoleManagementPage() {
         </table>
       </div>
 
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 mb-2">{t.userRoles.about.title}</h3>
-        <ul className="text-sm text-blue-800 space-y-1">
+      {/* Mobile Card View - Visible on Mobile Only */}
+      <div className="md:hidden space-y-3">
+        {users?.map((user) => (
+          <div key={user.id} className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="flex-shrink-0 h-12 w-12">
+                <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
+                  <span className="text-indigo-600 font-semibold">
+                    {user.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-base font-medium text-gray-900 truncate">{user.name}</div>
+                <div className="text-sm text-gray-600 truncate">{user.email}</div>
+                {user.id === currentUser?.id && (
+                  <div className="text-xs text-gray-500 mt-1">{t.userRoles.table.you}</div>
+                )}
+              </div>
+              <span
+                className={`px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
+                  user.role === 'admin'
+                    ? 'bg-purple-100 text-purple-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}
+              >
+                {user.role === 'admin' ? t.userRoles.roles.admin : t.userRoles.roles.user}
+              </span>
+            </div>
+            
+            {user.id === currentUser?.id ? (
+              <div className="text-sm text-gray-400 text-center py-2 border-t">
+                {t.userRoles.table.cannotModify}
+              </div>
+            ) : (
+              <div className="flex gap-2 pt-3 border-t">
+                {user.role !== 'admin' && (
+                  <button
+                    onClick={() => handleRoleChange(user.id, 'admin')}
+                    disabled={updateRoleMutation.isPending}
+                    className="flex-1 px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {t.userRoles.table.makeAdmin}
+                  </button>
+                )}
+                {user.role === 'admin' && (
+                  <button
+                    onClick={() => handleRoleChange(user.id, 'user')}
+                    disabled={updateRoleMutation.isPending}
+                    className="flex-1 px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {t.userRoles.table.removeAdmin}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 sm:mt-6 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+        <h3 className="font-semibold text-blue-900 mb-2 text-sm sm:text-base">{t.userRoles.about.title}</h3>
+        <ul className="text-xs sm:text-sm text-blue-800 space-y-1">
           <li><strong>{t.userRoles.roles.user.charAt(0).toUpperCase() + t.userRoles.roles.user.slice(1)}:</strong> {t.userRoles.about.userDescription}</li>
           <li><strong>{t.userRoles.roles.admin.charAt(0).toUpperCase() + t.userRoles.roles.admin.slice(1)}:</strong> {t.userRoles.about.adminDescription}</li>
         </ul>
