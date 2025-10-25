@@ -162,25 +162,25 @@ export default function ExpenseList({ expenses, groupId }: Props) {
 
   if (expenses.length === 0) {
     return (
-      <div className="p-6 text-center text-gray-500">
-        <p>{t.expenses.noExpenses}</p>
+      <div className="p-4 sm:p-6 text-center text-gray-500">
+        <p className="text-sm sm:text-base">{t.expenses.noExpenses}</p>
       </div>
     );
   }
 
   if (filteredExpenses.length === 0) {
     return (
-      <div className="p-6">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-4">{t.expenses.title}</h2>
+      <div className="p-3 sm:p-6">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">{t.expenses.title}</h2>
           
           {/* Filter Section */}
-          <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+          <div className="bg-gray-50 p-3 sm:p-4 rounded-lg space-y-3 sm:space-y-4">
             {/* Preset Filters */}
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handlePresetFilterChange('current-month')}
-                className={`px-4 py-2 rounded ${
+                className={`px-3 sm:px-4 py-2 rounded text-sm ${
                   presetFilter === 'current-month'
                     ? 'bg-blue-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-100'
@@ -190,7 +190,7 @@ export default function ExpenseList({ expenses, groupId }: Props) {
               </button>
               <button
                 onClick={() => handlePresetFilterChange('last-month')}
-                className={`px-4 py-2 rounded ${
+                className={`px-3 sm:px-4 py-2 rounded text-sm ${
                   presetFilter === 'last-month'
                     ? 'bg-blue-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-100'
@@ -200,7 +200,7 @@ export default function ExpenseList({ expenses, groupId }: Props) {
               </button>
               <button
                 onClick={() => handlePresetFilterChange('all')}
-                className={`px-4 py-2 rounded ${
+                className={`px-3 sm:px-4 py-2 rounded text-sm ${
                   presetFilter === 'all'
                     ? 'bg-blue-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-100'
@@ -211,16 +211,16 @@ export default function ExpenseList({ expenses, groupId }: Props) {
             </div>
 
             {/* Custom Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {/* Category Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   {t.expenses.filters.category}
                 </label>
                 <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded text-sm"
                 >
                   <option value="">{t.expenses.filters.allCategories}</option>
                   {uniqueCategories.map((category) => (
@@ -233,13 +233,13 @@ export default function ExpenseList({ expenses, groupId }: Props) {
 
               {/* Person Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   {t.expenses.filters.person}
                 </label>
                 <select
                   value={personFilter}
                   onChange={(e) => setPersonFilter(e.target.value)}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded text-sm"
                 >
                   <option value="">{t.expenses.filters.allPeople}</option>
                   {uniquePersons.map((person) => (
@@ -252,7 +252,7 @@ export default function ExpenseList({ expenses, groupId }: Props) {
 
               {/* Start Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   {t.expenses.filters.startDate}
                 </label>
                 <input
@@ -262,13 +262,13 @@ export default function ExpenseList({ expenses, groupId }: Props) {
                     setStartDate(e.target.value);
                     setPresetFilter('all');
                   }}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded text-sm"
                 />
               </div>
 
               {/* End Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   {t.expenses.filters.endDate}
                 </label>
                 <input
@@ -278,19 +278,19 @@ export default function ExpenseList({ expenses, groupId }: Props) {
                     setEndDate(e.target.value);
                     setPresetFilter('all');
                   }}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded text-sm"
                 />
               </div>
             </div>
 
             {/* Clear Filters Button */}
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div className="text-xs sm:text-sm text-gray-600">
                 {t.expenses.filters.showing} {filteredExpenses.length} {t.expenses.filters.of} {expenses.length} {t.expenses.filters.expenses}
               </div>
               <button
                 onClick={clearFilters}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-xs sm:text-sm text-blue-600 hover:text-blue-800"
               >
                 {t.expenses.filters.clearFilters}
               </button>
@@ -299,7 +299,7 @@ export default function ExpenseList({ expenses, groupId }: Props) {
         </div>
 
         <div className="text-center text-gray-500 py-8">
-          <p>{t.expenses.filters.noResults}</p>
+          <p className="text-sm sm:text-base">{t.expenses.filters.noResults}</p>
         </div>
       </div>
     );
@@ -332,17 +332,17 @@ export default function ExpenseList({ expenses, groupId }: Props) {
         </div>
       )}
 
-      <div className="p-6">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-4">{t.expenses.title}</h2>
+      <div className="p-3 sm:p-6">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">{t.expenses.title}</h2>
           
           {/* Filter Section */}
-          <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+          <div className="bg-gray-50 p-3 sm:p-4 rounded-lg space-y-3 sm:space-y-4">
             {/* Preset Filters */}
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handlePresetFilterChange('current-month')}
-                className={`px-4 py-2 rounded ${
+                className={`px-3 sm:px-4 py-2 rounded text-sm ${
                   presetFilter === 'current-month'
                     ? 'bg-blue-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-100'
@@ -352,7 +352,7 @@ export default function ExpenseList({ expenses, groupId }: Props) {
               </button>
               <button
                 onClick={() => handlePresetFilterChange('last-month')}
-                className={`px-4 py-2 rounded ${
+                className={`px-3 sm:px-4 py-2 rounded text-sm ${
                   presetFilter === 'last-month'
                     ? 'bg-blue-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-100'
@@ -362,7 +362,7 @@ export default function ExpenseList({ expenses, groupId }: Props) {
               </button>
               <button
                 onClick={() => handlePresetFilterChange('all')}
-                className={`px-4 py-2 rounded ${
+                className={`px-3 sm:px-4 py-2 rounded text-sm ${
                   presetFilter === 'all'
                     ? 'bg-blue-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-100'
@@ -373,16 +373,16 @@ export default function ExpenseList({ expenses, groupId }: Props) {
             </div>
 
             {/* Custom Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {/* Category Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   {t.expenses.filters.category}
                 </label>
                 <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded text-sm"
                 >
                   <option value="">{t.expenses.filters.allCategories}</option>
                   {uniqueCategories.map((category) => (
@@ -395,13 +395,13 @@ export default function ExpenseList({ expenses, groupId }: Props) {
 
               {/* Person Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   {t.expenses.filters.person}
                 </label>
                 <select
                   value={personFilter}
                   onChange={(e) => setPersonFilter(e.target.value)}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded text-sm"
                 >
                   <option value="">{t.expenses.filters.allPeople}</option>
                   {uniquePersons.map((person) => (
@@ -414,7 +414,7 @@ export default function ExpenseList({ expenses, groupId }: Props) {
 
               {/* Start Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   {t.expenses.filters.startDate}
                 </label>
                 <input
@@ -422,15 +422,15 @@ export default function ExpenseList({ expenses, groupId }: Props) {
                   value={startDate}
                   onChange={(e) => {
                     setStartDate(e.target.value);
-                    setPresetFilter('all'); // Clear preset when custom date is set
+                    setPresetFilter('all');
                   }}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded text-sm"
                 />
               </div>
 
               {/* End Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   {t.expenses.filters.endDate}
                 </label>
                 <input
@@ -438,21 +438,21 @@ export default function ExpenseList({ expenses, groupId }: Props) {
                   value={endDate}
                   onChange={(e) => {
                     setEndDate(e.target.value);
-                    setPresetFilter('all'); // Clear preset when custom date is set
+                    setPresetFilter('all');
                   }}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded text-sm"
                 />
               </div>
             </div>
 
             {/* Clear Filters Button */}
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div className="text-xs sm:text-sm text-gray-600">
                 {t.expenses.filters.showing} {filteredExpenses.length} {t.expenses.filters.of} {expenses.length} {t.expenses.filters.expenses}
               </div>
               <button
                 onClick={clearFilters}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-xs sm:text-sm text-blue-600 hover:text-blue-800"
               >
                 {t.expenses.filters.clearFilters}
               </button>
@@ -460,7 +460,8 @@ export default function ExpenseList({ expenses, groupId }: Props) {
           </div>
         </div>
 
-      <div className="overflow-x-auto">
+      {/* Desktop Table View - Hidden on Mobile */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -593,11 +594,119 @@ export default function ExpenseList({ expenses, groupId }: Props) {
                 {t.expenses.total}
               </td>
               <td className="px-6 py-4 text-sm font-bold text-right text-gray-900">
-                {formatCurrency(expenses.reduce((sum, exp) => sum + exp.amount, 0))}
+                {formatCurrency(filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0))}
               </td>
             </tr>
           </tfoot>
         </table>
+      </div>
+
+      {/* Mobile Card View - Visible on Mobile Only */}
+      <div className="md:hidden space-y-3">
+        {filteredExpenses.map((expense) => (
+          <div key={expense.id} className="bg-white border rounded-lg p-4 shadow-sm">
+            {editingExpense === expense.id ? (
+              // Edit Mode
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500">{t.expenses.description}</label>
+                  <input
+                    type="text"
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    className="w-full p-2 border rounded text-sm mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">{t.expenses.category}</label>
+                  <input
+                    type="text"
+                    value={editForm.category}
+                    onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                    className="w-full p-2 border rounded text-sm mt-1"
+                    placeholder={t.expenses.categoryPlaceholder}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">{t.expenses.amount}</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editForm.amount}
+                    onChange={(e) => setEditForm({ ...editForm, amount: parseFloat(e.target.value) })}
+                    className="w-full p-2 border rounded text-sm mt-1"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => handleUpdate(expense.id, expense.user.id)}
+                    className="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-sm"
+                  >
+                    {t.expenses.save}
+                  </button>
+                  <button
+                    onClick={() => setEditingExpense(null)}
+                    className="flex-1 bg-gray-300 hover:bg-gray-400 px-3 py-2 rounded text-sm"
+                  >
+                    {t.expenses.cancelEdit}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // View Mode
+              <>
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">{expense.description}</span>
+                      {expense.imageUrl && (
+                        <button
+                          onClick={() => setSelectedImage(expense.imageUrl || null)}
+                          className="text-blue-500 hover:text-blue-700 text-lg"
+                          title={t.expenses.viewInvoice}
+                        >
+                          📎
+                        </button>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      {expense.category || '-'}
+                    </div>
+                  </div>
+                  <div className="text-right ml-2">
+                    <div className="font-bold text-gray-900">{formatCurrency(expense.amount)}</div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
+                  <span>{expense.user.name}</span>
+                  <span>{new Date(expense.date).toLocaleDateString()}</span>
+                </div>
+                <div className="flex gap-2 pt-2 border-t">
+                  <button
+                    onClick={() => handleEdit(expense)}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm"
+                  >
+                    ✏️ {t.expenses.edit}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(expense.id, expense.description)}
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm"
+                  >
+                    🗑️ {t.expenses.delete}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+        
+        {/* Mobile Total */}
+        <div className="bg-gray-50 border rounded-lg p-4 font-bold">
+          <div className="flex justify-between items-center">
+            <span>{t.expenses.total}</span>
+            <span className="text-lg">{formatCurrency(filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0))}</span>
+          </div>
+        </div>
       </div>
     </div>
     </>

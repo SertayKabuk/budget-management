@@ -73,23 +73,23 @@ export default function GroupPage() {
   }
 
   return (
-    <div className="px-4 py-6">
-      <div className="mb-6 flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{group.name}</h1>
+    <div className="px-3 sm:px-4 py-4 sm:py-6">
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row justify-between items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">{group.name}</h1>
           {group.description && (
-            <p className="text-gray-600 mt-2">{group.description}</p>
+            <p className="text-gray-600 mt-2 text-sm sm:text-base">{group.description}</p>
           )}
         </div>
         <Link
           to="/"
-          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
+          className="bg-gray-500 hover:bg-gray-600 text-white px-3 sm:px-4 py-2 rounded text-sm sm:text-base whitespace-nowrap w-full sm:w-auto text-center"
         >
           {t.group.backToHome}
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
         <div className="lg:col-span-2">
           <GroupSummary summary={summary} />
         </div>
@@ -100,8 +100,8 @@ export default function GroupPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-semibold">{t.group.expenseHistory}</h2>
+        <div className="p-4 sm:p-6 border-b">
+          <h2 className="text-lg sm:text-xl font-semibold">{t.group.expenseHistory}</h2>
         </div>
         <ExpenseList expenses={expenses || []} groupId={id!} />
       </div>
