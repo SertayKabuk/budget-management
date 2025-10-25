@@ -139,8 +139,7 @@ export default function InvoiceUpload({ userId, groupId, onUploadSuccess }: Prop
             autoPlay
             playsInline
             muted
-            className="w-full max-w-full sm:max-w-md rounded border"
-            style={{ minHeight: '200px', maxHeight: '400px', backgroundColor: '#000' }}
+            className="w-full max-w-full sm:max-w-md rounded border min-h-[200px] max-h-[400px] bg-black"
           />
           <button
             onClick={capturePhoto}
