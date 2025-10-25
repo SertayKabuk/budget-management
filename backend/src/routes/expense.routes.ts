@@ -50,7 +50,7 @@ router.get('/', async (req: Request, res: Response) => {
       select: { groupId: true }
     });
 
-    const groupIds = userGroups.map(g => g.groupId);
+    const groupIds = userGroups.map((g: { groupId: string }) => g.groupId);
 
     const expenses = await prisma.expense.findMany({
       where: {

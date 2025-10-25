@@ -127,9 +127,9 @@ router.get('/:id/summary', async (req: Request, res: Response) => {
       }
     });
 
-    const totalSpending = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const totalSpending = expenses.reduce((sum: number, exp: any) => sum + exp.amount, 0);
     
-    const spendingByUser = expenses.reduce((acc, exp) => {
+    const spendingByUser = expenses.reduce((acc: Record<string, any>, exp: any) => {
       if (!acc[exp.userId]) {
         acc[exp.userId] = {
           user: exp.user,
