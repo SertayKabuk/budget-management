@@ -139,6 +139,8 @@ jobs:
 
       - name: Build backend
         working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_budget_db
         run: npm run build
 
       - name: Check build artifacts
