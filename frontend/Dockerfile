@@ -30,10 +30,10 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy config template and entrypoint script for runtime configuration
 COPY config.template.js /usr/share/nginx/html/config.template.js
-COPY env.sh /docker-entrypoint.d/env.sh
+COPY env.sh /docker-entrypoint.d/05-runtime-env.sh
 
 # Make entrypoint script executable
-RUN chmod +x /docker-entrypoint.d/env.sh
+RUN chmod +x /docker-entrypoint.d/05-runtime-env.sh
 
 # Expose port
 EXPOSE 80
