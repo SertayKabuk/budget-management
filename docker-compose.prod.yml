@@ -40,11 +40,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=${BACKEND_URL}
-        - VITE_WS_URL=${BACKEND_WS_URL}
     container_name: budget-frontend-prod
     restart: unless-stopped
+    environment:
+      - VITE_API_URL=${BACKEND_URL}
+      - VITE_WS_URL=${BACKEND_WS_URL}
     labels:
       # You will configure these Traefik labels for your production domain
       - "traefik.enable=true"

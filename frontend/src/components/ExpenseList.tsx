@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { expenseApi } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency } from '../utils/currency';
+import { config } from '../config/runtime';
 
 interface Props {
   expenses: Expense[];
@@ -304,7 +305,7 @@ export default function ExpenseList({ expenses, groupId }: Props) {
     );
   }
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const API_URL = config.apiUrl;
 
   return (
     <>

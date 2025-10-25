@@ -5,6 +5,7 @@ import { getSocket } from '../services/socket';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency } from '../utils/currency';
 import type { Expense } from '../types';
+import { config } from '../config/runtime';
 
 interface GroupSpendingSummaryProps {
   groupId: string;
@@ -245,10 +246,10 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
                               {expense.imageUrl && (
                                 <div className="flex-shrink-0">
                                   <img
-                                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${expense.imageUrl}`}
+                                    src={`${config.apiUrl}${expense.imageUrl}`}
                                     alt="Receipt"
                                     className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-75 transition-opacity"
-                                    onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${expense.imageUrl}`, '_blank')}
+                                    onClick={() => window.open(`${config.apiUrl}${expense.imageUrl}`, '_blank')}
                                   />
                                 </div>
                               )}
