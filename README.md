@@ -156,6 +156,8 @@ docker-compose -f docker-compose.local.yml up
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
+**Note**: Frontend uses runtime environment variable configuration. See `frontend/RUNTIME_CONFIG.md` for details on configuring `VITE_API_URL` and `VITE_WS_URL` for different environments without rebuilding the Docker image.
+
 ## Key Workflows
 
 ### Authentication Flow
