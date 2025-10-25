@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client';
+import { config } from '../config/runtime';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001';
+const WS_URL = config.wsUrl;
 
 let socket: Socket | null = null;
 
