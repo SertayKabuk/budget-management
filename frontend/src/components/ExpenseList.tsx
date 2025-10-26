@@ -1,24 +1,34 @@
 import type { Expense } from '../services/api';
 import { useState, useMemo, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { expenseApi, fetchAuthenticatedImage } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency } from '../utils/currency';
 
 interface Props {
-  expenses: Expense[];
   groupId: string;
 }
 
 type PresetFilter = 'current-month' | 'last-month' | 'all';
 
-export default function ExpenseList({ expenses, groupId }: Props) {
+export default function ExpenseList({ groupId }: Props) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  
+  // Fetch expenses
+  const { data: expenses = [] } = useQuery({
+    queryKey: ['expenses', groupId],
+    queryFn: async () => {
+      const response = await expenseApi.getAll(groupId);
+      return response.data;
+    },
+    enabled: !!groupId,
+  });
+  
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageBlob, setSelectedImageBlob] = useState<string | null>(null);
   const [editingExpense, setEditingExpense] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ amount: 0, description: '', category: '' });
-  const queryClient = useQueryClient();
 
   // Fetch authenticated image when selectedImage changes
   useEffect(() => {

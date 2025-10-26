@@ -141,6 +141,28 @@ export const tr = {
       last3Months: 'Son 3 Ay',
       allTime: 'Tüm Zamanlar',
     },
+    viewModes: {
+      summary: '📊 Özet',
+      monthly: '📅 Aylık Detay',
+      settlement: '💰 Hesaplaşma',
+    },
+    monthly: {
+      title: '📅 Aylık Harcama Detayları',
+      average: 'Ortalama',
+      noData: 'Henüz aylık veri yok',
+      percentageOfMonth: "of month's total",
+    },
+    settlement: {
+      title: '💰 Kim Kime Ne Kadar Borçlu?',
+      subtitle: 'Grup harcamalarını eşit paylaştırmak için gerekli ödemeler',
+      paymentInstruction: '{from} → {to} için {amount} ödemeli',
+      balanced: 'Hesaplar Dengede!',
+      balancedDesc: 'Herkes eşit miktarda harcama yapmış',
+      howItWorks: {
+        title: 'Nasıl çalışır?',
+        description: 'Tüm grup harcamaları üye sayısına bölünür. Ortalamanın üzerinde harcayan kişiler, az harcayanlardan para almalıdır. Bu liste, en az işlem sayısı ile herkesin eşit paylaşımını sağlar.',
+      },
+    },
   },
 
   // Group Members
