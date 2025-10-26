@@ -5,6 +5,7 @@ import { getSocket } from '../services/socket';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency } from '../utils/currency';
 import type { Expense } from '../types';
+import { config } from '../config/runtime';
 
 interface GroupSpendingSummaryProps {
   groupId: string;
@@ -65,7 +66,7 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
           <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
@@ -77,14 +78,14 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
 
   if (!expenses || expenses.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">{t.spending.title}</h3>
-          <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+          <h3 className="text-base sm:text-lg font-semibold">{t.spending.title}</h3>
+          <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 sm:px-3 py-1 rounded-full">
             📅 {t.expenses.filters.currentMonth}
           </span>
         </div>
-        <p className="text-gray-500 text-center py-4">{t.spending.noExpensesThisMonth}</p>
+        <p className="text-gray-500 text-center py-4 text-sm sm:text-base">{t.spending.noExpensesThisMonth}</p>
       </div>
     );
   }
@@ -134,28 +135,28 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">{t.spending.title}</h3>
-        <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+    <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+        <h3 className="text-base sm:text-lg font-semibold">{t.spending.title}</h3>
+        <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 sm:px-3 py-1 rounded-full">
           📅 {t.expenses.filters.currentMonth}
         </span>
       </div>
       
       {/* Total Spending */}
-      <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 mb-6">
-        <div className="text-sm text-blue-600 font-medium">{t.spending.totalGroupSpending}</div>
-        <div className="text-3xl font-bold text-blue-900 mt-1">
+      <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+        <div className="text-xs sm:text-sm text-blue-600 font-medium">{t.spending.totalGroupSpending}</div>
+        <div className="text-2xl sm:text-3xl font-bold text-blue-900 mt-1">
           {formatCurrency(totalSpending)}
         </div>
-        <div className="text-sm text-blue-600 mt-1">
+        <div className="text-xs sm:text-sm text-blue-600 mt-1">
           {expenses.length} {expenses.length !== 1 ? t.spending.expenses : t.spending.expense}
         </div>
       </div>
 
       {/* User Spending Breakdown */}
-      <div className="space-y-4">
-        <h4 className="text-md font-semibold text-gray-700">{t.spending.spendingByMember}</h4>
+      <div className="space-y-3 sm:space-y-4">
+        <h4 className="text-sm sm:text-md font-semibold text-gray-700">{t.spending.spendingByMember}</h4>
         {userSpendings.map((userSpending) => {
           const percentage = (userSpending.total / totalSpending) * 100;
           const isExpanded = expandedUsers.has(userSpending.userId);
@@ -164,17 +165,17 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
             <div key={userSpending.userId} className="border rounded-lg overflow-hidden">
               {/* Header - Always visible */}
               <div 
-                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                className="p-3 sm:p-4 cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => toggleUserExpansion(userSpending.userId)}
               >
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-900">{userSpending.userName}</span>
-                    <span className="text-gray-500 text-sm">
+                    <span className="font-medium text-gray-900 text-sm sm:text-base">{userSpending.userName}</span>
+                    <span className="text-gray-500 text-xs sm:text-sm">
                       {isExpanded ? '▼' : '▶'}
                     </span>
                   </div>
-                  <div className="text-lg font-semibold text-gray-900">
+                  <div className="text-base sm:text-lg font-semibold text-gray-900">
                     {formatCurrency(userSpending.total)}
                   </div>
                 </div>
@@ -190,7 +191,7 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
 
               {/* Collapsible Expense Details */}
               {isExpanded && (
-                <div className="px-4 pb-4 bg-gray-50">
+                <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-gray-50">
                   {/* Category Summary */}
                   <div className="mb-4">
                     <div className="text-xs font-semibold text-gray-500 uppercase mb-2">
@@ -204,20 +205,20 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
                           return (
                             <div
                               key={category}
-                              className="flex justify-between items-center text-sm py-2 border-b border-gray-200 last:border-b-0"
+                              className="flex justify-between items-center text-xs sm:text-sm py-2 border-b border-gray-200 last:border-b-0 gap-2"
                             >
-                              <div className="flex items-center gap-2 flex-1">
-                                <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
-                                <span className="text-gray-700">{category}</span>
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <span className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0"></span>
+                                <span className="text-gray-700 truncate">{category}</span>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <div className="w-24 bg-gray-200 rounded-full h-1.5">
+                              <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                                <div className="w-16 sm:w-24 bg-gray-200 rounded-full h-1.5">
                                   <div
                                     className="bg-blue-400 h-1.5 rounded-full transition-all duration-300"
                                     style={{ width: `${categoryPercentage}%` }}
                                   ></div>
                                 </div>
-                                <span className="font-medium text-gray-900 w-20 text-right">
+                                <span className="font-medium text-gray-900 w-16 sm:w-20 text-right">
                                   {formatCurrency(amount)}
                                 </span>
                               </div>
@@ -238,17 +239,17 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
                         .map((expense) => (
                           <div
                             key={expense.id}
-                            className="bg-white rounded-lg p-3 border border-gray-200 hover:shadow-md transition-shadow"
+                            className="bg-white rounded-lg p-2 sm:p-3 border border-gray-200 hover:shadow-md transition-shadow"
                           >
-                            <div className="flex gap-3">
+                            <div className="flex gap-2 sm:gap-3">
                               {/* Image if available */}
                               {expense.imageUrl && (
                                 <div className="flex-shrink-0">
                                   <img
-                                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${expense.imageUrl}`}
+                                    src={`${config.apiUrl}${expense.imageUrl}`}
                                     alt="Receipt"
-                                    className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-75 transition-opacity"
-                                    onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${expense.imageUrl}`, '_blank')}
+                                    className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded cursor-pointer hover:opacity-75 transition-opacity"
+                                    onClick={() => window.open(`${config.apiUrl}${expense.imageUrl}`, '_blank')}
                                   />
                                 </div>
                               )}
@@ -257,7 +258,7 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
                               <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-start gap-2">
                                   <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-gray-900 truncate">
+                                    <div className="font-medium text-gray-900 text-xs sm:text-sm truncate">
                                       {expense.description}
                                     </div>
                                     <div className="text-xs text-gray-500 mt-0.5">
@@ -276,7 +277,7 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
                                     )}
                                   </div>
                                   <div className="text-right flex-shrink-0">
-                                    <div className="font-semibold text-gray-900">
+                                    <div className="font-semibold text-gray-900 text-xs sm:text-sm">
                                       {formatCurrency(expense.amount)}
                                     </div>
                                   </div>

@@ -63,11 +63,11 @@ export default function HomePage() {
   };
 
   return (
-    <div className="px-4 py-6 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">{t.home.title}</h1>
+    <div className="px-3 sm:px-4 py-4 sm:py-6 max-w-5xl mx-auto">
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">{t.home.title}</h1>
 
       {/* Group Selection */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           {t.home.selectGroup}
         </label>
@@ -80,7 +80,7 @@ export default function HomePage() {
           <select
             value={selectedGroupId}
             onChange={(e) => setSelectedGroupId(e.target.value)}
-            className="w-full p-3 border rounded-lg text-lg"
+            className="w-full p-3 border rounded-lg text-base sm:text-lg"
           >
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
@@ -94,13 +94,13 @@ export default function HomePage() {
       {selectedGroupId && group && user && (
         <>
           {/* Group Spending Summary */}
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             <GroupSpendingSummary groupId={selectedGroupId} />
           </div>
 
           {/* Upload Invoice */}
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h3 className="text-lg font-semibold mb-4">{t.home.uploadInvoice}</h3>
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{t.home.uploadInvoice}</h3>
             <InvoiceUpload 
               userId={user.id} 
               groupId={selectedGroupId} 
@@ -109,11 +109,11 @@ export default function HomePage() {
           </div>
 
           {/* AI Chat Assistant */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
               {t.home.chatWithAI}
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 mb-3 sm:mb-4">
               {t.home.chatSubtitle}
             </p>
             <ChatInterface 

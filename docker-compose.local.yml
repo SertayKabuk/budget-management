@@ -47,11 +47,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=http://backend.localhost
-        - VITE_WS_URL=ws://backend.localhost
     container_name: budget-frontend-local
     restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://backend.localhost
+      - VITE_WS_URL=ws://backend.localhost
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`frontend.localhost`)"

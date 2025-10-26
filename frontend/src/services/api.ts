@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { User, Group, Expense } from '../types';
+import { config } from '../config/runtime';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = config.apiUrl;
 
 export const api = axios.create({
   baseURL: `${API_URL}/api`,

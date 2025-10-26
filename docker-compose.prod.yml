@@ -43,9 +43,14 @@ services:
     restart: unless-stopped
 
   frontend:
-    container_name: budget_frontend_container
-    expose:
-      - 80
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: budget-frontend-prod
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=${BACKEND_URL}
+      - VITE_WS_URL=${BACKEND_WS_URL}
     labels:
       - com.centurylinklabs.watchtower.enable=true
       - "traefik.enable=true"

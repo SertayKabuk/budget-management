@@ -16,15 +16,7 @@ RUN npm config set fetch-timeout 60000 && \
 # Copy all source files (.dockerignore will exclude unnecessary files)
 COPY . .
 
-# Accept build arguments for environment variables
-ARG VITE_API_URL
-ARG VITE_WS_URL
-
-# Set environment variables for Vite build
-ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_WS_URL=$VITE_WS_URL
-
-# Build the application - use node_modules/.bin for reliable paths
+# Build the application - no build-time env vars needed anymore
 RUN ./node_modules/.bin/tsc -b && ./node_modules/.bin/vite build
 
 # Production stage with nginx
@@ -36,8 +28,19 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
+# Copy config template and entrypoint script for runtime configuration
+COPY config.template.js /usr/share/nginx/html/config.template.js
+COPY env.sh /docker-entrypoint.d/05-runtime-env.sh
+
+# Make entrypoint script executable
+RUN chmod +x /docker-entrypoint.d/05-runtime-env.sh
+
 # Expose port
 EXPOSE 80
 
-# Start nginx
+# Environment variables will be injected at runtime
+ENV VITE_API_URL=http://localhost:3001
+ENV VITE_WS_URL=ws://localhost:3001
+
+# Start nginx (entrypoint script runs automatically via /docker-entrypoint.d/)
 CMD ["nginx", "-g", "daemon off;"]
