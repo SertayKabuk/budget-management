@@ -122,6 +122,12 @@ export const tr = {
     uncategorized: 'Kategorisiz',
     categoryBreakdown: 'Kategori Dağılımı',
     expenseDetails: 'Harcama Detayları',
+    timePeriods: {
+      currentMonth: 'Bu Ay',
+      last2Months: 'Son 2 Ay',
+      last3Months: 'Son 3 Ay',
+      allTime: 'Tüm Zamanlar',
+    },
   },
 
   // Group Members
@@ -250,6 +256,7 @@ export const tr = {
       applyFilters: 'Filtreleri Uygula',
       clearFilters: 'Filtreleri Temizle',
       quickFilters: 'Hızlı Filtreler',
+      allTime: 'Tüm Zamanlar',
       today: 'Bugün',
       thisWeek: 'Bu Hafta',
       thisMonth: 'Bu Ay',

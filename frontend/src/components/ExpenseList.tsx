@@ -1,10 +1,9 @@
 import type { Expense } from '../services/api';
 import { useState, useMemo, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { expenseApi } from '../services/api';
+import { expenseApi, fetchAuthenticatedImage } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency } from '../utils/currency';
-import { config } from '../config/runtime';
 
 interface Props {
   expenses: Expense[];
@@ -16,9 +15,32 @@ type PresetFilter = 'current-month' | 'last-month' | 'all';
 export default function ExpenseList({ expenses, groupId }: Props) {
   const { t } = useTranslation();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageBlob, setSelectedImageBlob] = useState<string | null>(null);
   const [editingExpense, setEditingExpense] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ amount: 0, description: '', category: '' });
   const queryClient = useQueryClient();
+
+  // Fetch authenticated image when selectedImage changes
+  useEffect(() => {
+    if (selectedImage) {
+      fetchAuthenticatedImage(selectedImage).then(blobUrl => {
+        setSelectedImageBlob(blobUrl);
+      });
+    } else {
+      // Clean up the blob URL when modal closes
+      if (selectedImageBlob) {
+        URL.revokeObjectURL(selectedImageBlob);
+        setSelectedImageBlob(null);
+      }
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (selectedImageBlob) {
+        URL.revokeObjectURL(selectedImageBlob);
+      }
+    };
+  }, [selectedImage]);
 
   // Filter states
   const [presetFilter, setPresetFilter] = useState<PresetFilter>('current-month');
@@ -305,12 +327,10 @@ export default function ExpenseList({ expenses, groupId }: Props) {
     );
   }
 
-  const API_URL = config.apiUrl;
-
   return (
     <>
       {/* Image Modal */}
-      {selectedImage && (
+      {selectedImage && selectedImageBlob && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedImage(null)}
@@ -323,7 +343,7 @@ export default function ExpenseList({ expenses, groupId }: Props) {
               ✕
             </button>
             <img 
-              src={`${API_URL}${selectedImage}`} 
+              src={selectedImageBlob} 
               alt="Invoice" 
               className="max-w-full max-h-screen object-contain rounded"
               onClick={(e) => e.stopPropagation()}

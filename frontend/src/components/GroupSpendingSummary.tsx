@@ -5,7 +5,7 @@ import { getSocket } from '../services/socket';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency } from '../utils/currency';
 import type { Expense } from '../types';
-import { config } from '../config/runtime';
+import AuthenticatedImage from './AuthenticatedImage';
 
 interface GroupSpendingSummaryProps {
   groupId: string;
@@ -18,10 +18,13 @@ interface UserSpending {
   categories: Record<string, number>;
 }
 
+type TimePeriod = 'currentMonth' | 'last2Months' | 'last3Months' | 'allTime';
+
 export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryProps) {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('currentMonth');
 
   const { data: allExpenses, isLoading } = useQuery({
     queryKey: ['expenses', groupId],
@@ -32,21 +35,37 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
     enabled: !!groupId,
   });
 
-  // Filter expenses to current month
+  // Filter expenses based on selected time period
   const expenses = useMemo(() => {
     if (!allExpenses) return [];
     
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
-    const startOfMonth = new Date(year, month, 1);
-    const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
+
+    let startDate: Date;
+
+    switch (timePeriod) {
+      case 'currentMonth':
+        startDate = new Date(year, month, 1);
+        break;
+      case 'last2Months':
+        startDate = new Date(year, month - 1, 1);
+        break;
+      case 'last3Months':
+        startDate = new Date(year, month - 2, 1);
+        break;
+      case 'allTime':
+        return allExpenses;
+      default:
+        startDate = new Date(year, month, 1);
+    }
 
     return allExpenses.filter(expense => {
       const expenseDate = new Date(expense.date);
-      return expenseDate >= startOfMonth && expenseDate <= endOfMonth;
+      return expenseDate >= startDate;
     });
-  }, [allExpenses]);
+  }, [allExpenses, timePeriod]);
 
   // Listen for real-time expense updates
   useEffect(() => {
@@ -79,13 +98,29 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
   if (!expenses || expenses.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-          <h3 className="text-base sm:text-lg font-semibold">{t.spending.title}</h3>
-          <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 sm:px-3 py-1 rounded-full">
-            📅 {t.expenses.filters.currentMonth}
-          </span>
+        <div className="mb-4">
+          <h3 className="text-base sm:text-lg font-semibold mb-3">{t.spending.title}</h3>
+          
+          {/* Time Period Filter Buttons */}
+          <div className="flex flex-wrap gap-2">
+            {(['currentMonth', 'last2Months', 'last3Months', 'allTime'] as TimePeriod[]).map((period) => (
+              <button
+                key={period}
+                onClick={() => setTimePeriod(period)}
+                className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                  timePeriod === period
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {t.spending.timePeriods[period]}
+              </button>
+            ))}
+          </div>
         </div>
-        <p className="text-gray-500 text-center py-4 text-sm sm:text-base">{t.spending.noExpensesThisMonth}</p>
+        <p className="text-gray-500 text-center py-4 text-sm sm:text-base">
+          {timePeriod === 'currentMonth' ? t.spending.noExpensesThisMonth : t.spending.noExpenses}
+        </p>
       </div>
     );
   }
@@ -136,11 +171,25 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
 
   return (
     <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-        <h3 className="text-base sm:text-lg font-semibold">{t.spending.title}</h3>
-        <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 sm:px-3 py-1 rounded-full">
-          📅 {t.expenses.filters.currentMonth}
-        </span>
+      <div className="mb-4">
+        <h3 className="text-base sm:text-lg font-semibold mb-3">{t.spending.title}</h3>
+        
+        {/* Time Period Filter Buttons */}
+        <div className="flex flex-wrap gap-2">
+          {(['currentMonth', 'last2Months', 'last3Months', 'allTime'] as TimePeriod[]).map((period) => (
+            <button
+              key={period}
+              onClick={() => setTimePeriod(period)}
+              className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                timePeriod === period
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {t.spending.timePeriods[period]}
+            </button>
+          ))}
+        </div>
       </div>
       
       {/* Total Spending */}
@@ -245,11 +294,10 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
                               {/* Image if available */}
                               {expense.imageUrl && (
                                 <div className="flex-shrink-0">
-                                  <img
-                                    src={`${config.apiUrl}${expense.imageUrl}`}
+                                  <AuthenticatedImage
+                                    imageUrl={expense.imageUrl}
                                     alt="Receipt"
                                     className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded cursor-pointer hover:opacity-75 transition-opacity"
-                                    onClick={() => window.open(`${config.apiUrl}${expense.imageUrl}`, '_blank')}
                                   />
                                 </div>
                               )}

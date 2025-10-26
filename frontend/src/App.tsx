@@ -43,7 +43,7 @@ function AppContent() {
                       to="/admin" 
                       className="flex items-center px-2 py-2 text-gray-600 hover:text-gray-900 text-sm"
                     >
-                      {t.nav.admin}
+                      ⚙️ {t.nav.admin}
                     </Link>
                   )}
                 </div>
@@ -114,7 +114,7 @@ function AppContent() {
                   className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {t.nav.admin}
+                  ⚙️ {t.nav.admin}
                 </Link>
               )}
             </div>

@@ -4,6 +4,28 @@ import { config } from '../config/runtime';
 
 const API_URL = config.apiUrl;
 
+
+// Fetch image with authentication and return blob URL
+export const fetchAuthenticatedImage = async (imageUrl: string | null | undefined): Promise<string | null> => {
+  if (!imageUrl) return null;
+  
+  const filename = imageUrl.split('/').pop();
+  if (!filename) return null;
+  
+  try {
+    const response = await api.get(`/expenses/image/${filename}`, {
+      responseType: 'blob'
+    });
+    
+    // Create a blob URL that can be used in img tags
+    const blobUrl = URL.createObjectURL(response.data);
+    return blobUrl;
+  } catch (error) {
+    console.error('Error fetching authenticated image:', error);
+    return null;
+  }
+};
+
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
   headers: {

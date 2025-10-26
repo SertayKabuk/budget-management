@@ -51,7 +51,7 @@ export default function AnalyticsPage() {
     minAmount: '',
     maxAmount: '',
     searchText: '',
-    quickFilter: 'thisMonth',
+    quickFilter: 'allTime',
   });
 
   // Load groups on mount
@@ -61,10 +61,10 @@ export default function AnalyticsPage() {
 
   // Load expenses when group changes
   useEffect(() => {
-    if (selectedGroupId) {
+    if (selectedGroupId && groups.length > 0) {
       loadExpenses();
     }
-  }, [selectedGroupId]);
+  }, [selectedGroupId, groups.length]);
 
   // Apply quick filter when it changes
   useEffect(() => {
@@ -89,15 +89,8 @@ export default function AnalyticsPage() {
     
     setLoading(true);
     try {
-      // Verify user has access to this group before loading expenses
-      const isUserMember = groups.find(g => g.id === selectedGroupId);
-      if (!isUserMember) {
-        console.error('User is not a member of this group');
-        setExpenses([]);
-        return;
-      }
-      
       const response = await expenseApi.getAll(selectedGroupId);
+      console.log('Loaded expenses:', response.data.length, 'expenses for group', selectedGroupId);
       setExpenses(response.data);
     } catch (error) {
       console.error('Failed to load expenses:', error);
@@ -113,6 +106,14 @@ export default function AnalyticsPage() {
     let endDate = new Date();
 
     switch (filterType) {
+      case 'allTime':
+        // Clear date filters to show all expenses
+        setFilters(prev => ({
+          ...prev,
+          startDate: '',
+          endDate: '',
+        }));
+        return;
       case 'today':
         startDate = new Date(now.setHours(0, 0, 0, 0));
         break;
@@ -151,7 +152,7 @@ export default function AnalyticsPage() {
 
   // Filter expenses based on current filters
   const filteredExpenses = useMemo(() => {
-    return expenses.filter(expense => {
+    const filtered = expenses.filter(expense => {
       const expenseDate = new Date(expense.date);
       const amount = expense.amount;
 
@@ -176,6 +177,15 @@ export default function AnalyticsPage() {
 
       return true;
     });
+    
+    console.log('Filtering:', expenses.length, 'total expenses →', filtered.length, 'filtered expenses');
+    console.log('Current filters:', {
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      quickFilter: filters.quickFilter
+    });
+    
+    return filtered;
   }, [expenses, filters]);
 
   // Calculate summary statistics
@@ -344,14 +354,22 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Group Selection */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="mb-6 bg-white rounded-lg shadow-md p-6">
+        <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+          <span className="text-lg">👥</span>
           {t.analytics.selectGroup}
         </label>
         <select
           value={selectedGroupId}
           onChange={(e) => setSelectedGroupId(e.target.value)}
-          className="block w-full md:w-64 rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          className="block w-full md:w-96 px-4 py-3 text-base rounded-lg border-2 border-gray-300 bg-white shadow-sm 
+                     hover:border-indigo-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 
+                     transition-colors duration-200 cursor-pointer appearance-none bg-no-repeat bg-right pr-10"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236366f1'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+            backgroundSize: '1.5rem',
+            backgroundPosition: 'right 0.75rem center'
+          }}
         >
           {groups.map((group) => (
             <option key={group.id} value={group.id}>
@@ -359,6 +377,9 @@ export default function AnalyticsPage() {
             </option>
           ))}
         </select>
+        <p className="mt-2 text-xs text-gray-500">
+          {groups.length} {groups.length === 1 ? 'grup mevcut' : 'grup mevcut'}
+        </p>
       </div>
 
       {loading ? (
@@ -367,7 +388,8 @@ export default function AnalyticsPage() {
         </div>
       ) : expenses.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow">
-          <p className="text-gray-600">{t.analytics.noExpenses}</p>
+          <p className="text-gray-600 text-lg mb-2">{t.analytics.noExpenses}</p>
+          <p className="text-gray-500 text-sm">Seçili grupta henüz harcama bulunmuyor. Ana sayfadan harcama ekleyebilirsiniz.</p>
         </div>
       ) : (
         <>
@@ -405,7 +427,7 @@ export default function AnalyticsPage() {
                 {t.analytics.filters.quickFilters}
               </label>
               <div className="flex flex-wrap gap-2">
-                {['today', 'thisWeek', 'thisMonth', 'lastMonth', 'last3Months', 'last6Months', 'thisYear', 'customRange'].map((filter) => (
+                {['allTime', 'today', 'thisWeek', 'thisMonth', 'lastMonth', 'last3Months', 'last6Months', 'thisYear', 'customRange'].map((filter) => (
                   <button
                     key={filter}
                     onClick={() => setFilters(prev => ({ ...prev, quickFilter: filter }))}
@@ -532,7 +554,16 @@ export default function AnalyticsPage() {
 
           {filteredExpenses.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-lg shadow">
-              <p className="text-gray-600">{t.analytics.noData}</p>
+              <p className="text-gray-600 text-lg mb-2">{t.analytics.noData}</p>
+              <p className="text-gray-500 text-sm mb-4">
+                {expenses.length} harcama var ama seçili filtrelere uymuyor.
+              </p>
+              <button
+                onClick={clearFilters}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                {t.analytics.filters.clearFilters}
+              </button>
             </div>
           ) : (
             <>

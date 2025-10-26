@@ -4,11 +4,68 @@ import { upload } from '../middleware/upload.middleware';
 import { parseInvoice } from '../services/openai.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import fs from 'fs';
+import path from 'path';
 
 const router = Router();
 
 // Apply authentication to all routes
 router.use(authenticateToken);
+
+// Proxied endpoint for serving images with authentication
+router.get('/image/:filename', async (req: Request, res: Response) => {
+  try {
+    const { filename } = req.params;
+    const userId = req.jwtUser?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Verify the expense with this image exists and user has access to it
+    const expense = await prisma.expense.findFirst({
+      where: {
+        imageUrl: `/uploads/${filename}`,
+        group: {
+          members: {
+            some: {
+              userId: userId
+            }
+          }
+        }
+      }
+    });
+
+    if (!expense) {
+      return res.status(404).json({ error: 'Image not found or access denied' });
+    }
+
+    // Serve the file
+    const filePath = path.join(__dirname, '../../uploads', filename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Set appropriate content type based on file extension
+    const ext = path.extname(filename).toLowerCase();
+    const contentTypes: { [key: string]: string } = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp'
+    };
+    
+    const contentType = contentTypes[ext] || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error('Error serving image:', error);
+    res.status(500).json({ error: 'Failed to serve image' });
+  }
+});
 
 router.get('/', async (req: Request, res: Response) => {
   try {

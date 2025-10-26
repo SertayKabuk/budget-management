@@ -60,12 +60,8 @@ services:
       - "traefik.docker.network=traefik_network"
       - "traefik.http.services.budget-frontend.loadbalancer.server.port=80"
     image: ghcr.io/sertaykabuk/budget-management/frontend:latest
-    environment:
-      VITE_API_URL: ${BACKEND_URL}
-      VITE_WS_URL: ${BACKEND_WS_URL}
     networks:
       - traefik_network
-    restart: unless-stopped
     depends_on:
       - backend
 
