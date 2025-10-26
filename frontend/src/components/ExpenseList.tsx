@@ -28,7 +28,7 @@ export default function ExpenseList({ groupId }: Props) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageBlob, setSelectedImageBlob] = useState<string | null>(null);
   const [editingExpense, setEditingExpense] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ amount: 0, description: '', category: '' });
+  const [editForm, setEditForm] = useState({ amount: 0, description: '', category: '', date: '' });
 
   // Fetch authenticated image when selectedImage changes
   useEffect(() => {
@@ -173,6 +173,7 @@ export default function ExpenseList({ groupId }: Props) {
       amount: expense.amount,
       description: expense.description,
       category: expense.category || '',
+      date: expense.date ? new Date(expense.date).toISOString().split('T')[0] : '',
     });
   };
 
@@ -528,8 +529,13 @@ export default function ExpenseList({ groupId }: Props) {
                 {editingExpense === expense.id ? (
                   // Edit Mode
                   <>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(expense.date).toLocaleDateString()}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <input
+                        type="date"
+                        value={editForm.date}
+                        onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                        className="w-full p-1 border rounded"
+                      />
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <input
@@ -645,6 +651,15 @@ export default function ExpenseList({ groupId }: Props) {
             {editingExpense === expense.id ? (
               // Edit Mode
               <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500">{t.expenses.date}</label>
+                  <input
+                    type="date"
+                    value={editForm.date}
+                    onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                    className="w-full p-2 border rounded text-sm mt-1"
+                  />
+                </div>
                 <div>
                   <label className="text-xs text-gray-500">{t.expenses.description}</label>
                   <input
