@@ -254,6 +254,159 @@ export default function AnalyticsPage() {
     };
   }, [filteredExpenses, t]);
 
+  // Monthly breakdown analysis
+  const monthlyBreakdown = useMemo(() => {
+    const monthsMap = new Map<string, {
+      monthKey: string;
+      monthLabel: string;
+      total: number;
+      count: number;
+      avgPerExpense: number;
+      categories: Record<string, number>;
+      members: Record<string, { name: string; total: number; count: number }>;
+    }>();
+
+    filteredExpenses.forEach((expense) => {
+      const date = new Date(expense.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthLabel = date.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long' });
+
+      if (!monthsMap.has(monthKey)) {
+        monthsMap.set(monthKey, {
+          monthKey,
+          monthLabel,
+          total: 0,
+          count: 0,
+          avgPerExpense: 0,
+          categories: {},
+          members: {}
+        });
+      }
+
+      const monthData = monthsMap.get(monthKey)!;
+      monthData.total += expense.amount;
+      monthData.count += 1;
+      
+      const category = expense.category || t.spending.uncategorized;
+      monthData.categories[category] = (monthData.categories[category] || 0) + expense.amount;
+
+      if (!monthData.members[expense.user.id]) {
+        monthData.members[expense.user.id] = { name: expense.user.name, total: 0, count: 0 };
+      }
+      monthData.members[expense.user.id].total += expense.amount;
+      monthData.members[expense.user.id].count += 1;
+    });
+
+    // Calculate averages
+    monthsMap.forEach((month) => {
+      month.avgPerExpense = month.count > 0 ? month.total / month.count : 0;
+    });
+
+    return Array.from(monthsMap.values())
+      .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+  }, [filteredExpenses, t]);
+
+  // Debt settlement calculation
+  const debtSettlements = useMemo(() => {
+    if (filteredExpenses.length === 0) return [];
+
+    const usersMap = new Map<string, { name: string; spent: number }>();
+    
+    filteredExpenses.forEach((expense) => {
+      if (!usersMap.has(expense.user.id)) {
+        usersMap.set(expense.user.id, { name: expense.user.name, spent: 0 });
+      }
+      usersMap.get(expense.user.id)!.spent += expense.amount;
+    });
+
+    const users = Array.from(usersMap.entries()).map(([id, data]) => ({
+      userId: id,
+      userName: data.name,
+      spent: data.spent
+    }));
+
+    if (users.length === 0) return [];
+
+    const totalSpent = users.reduce((sum, u) => sum + u.spent, 0);
+    const fairShare = totalSpent / users.length;
+
+    const balances = users.map(u => ({
+      userId: u.userId,
+      userName: u.userName,
+      balance: u.spent - fairShare,
+      fairShare: fairShare
+    }));
+
+    const creditors = balances.filter(b => b.balance > 0.01).sort((a, b) => b.balance - a.balance);
+    const debtors = balances.filter(b => b.balance < -0.01).sort((a, b) => a.balance - b.balance);
+
+    const settlements: { from: string; to: string; amount: number }[] = [];
+    const creditorsCopy = creditors.map(c => ({ ...c }));
+    const debtorsCopy = debtors.map(d => ({ ...d }));
+
+    while (creditorsCopy.length > 0 && debtorsCopy.length > 0) {
+      const creditor = creditorsCopy[0];
+      const debtor = debtorsCopy[0];
+      
+      const amount = Math.min(creditor.balance, Math.abs(debtor.balance));
+      
+      if (amount > 0.01) {
+        settlements.push({
+          from: debtor.userName,
+          to: creditor.userName,
+          amount: amount
+        });
+      }
+
+      creditor.balance -= amount;
+      debtor.balance += amount;
+
+      if (Math.abs(creditor.balance) < 0.01) creditorsCopy.shift();
+      if (Math.abs(debtor.balance) < 0.01) debtorsCopy.shift();
+    }
+
+    return { settlements, balances, fairShare };
+  }, [filteredExpenses]);
+
+  // Day of week analysis
+  const dayOfWeekData = useMemo(() => {
+    const days = [
+      t.analytics.dayOfWeek.days.sunday,
+      t.analytics.dayOfWeek.days.monday,
+      t.analytics.dayOfWeek.days.tuesday,
+      t.analytics.dayOfWeek.days.wednesday,
+      t.analytics.dayOfWeek.days.thursday,
+      t.analytics.dayOfWeek.days.friday,
+      t.analytics.dayOfWeek.days.saturday
+    ];
+    const dayTotals: Record<string, { total: number; count: number }> = {};
+
+    days.forEach(day => {
+      dayTotals[day] = { total: 0, count: 0 };
+    });
+
+    filteredExpenses.forEach(expense => {
+      const dayIndex = new Date(expense.date).getDay();
+      const dayName = days[dayIndex];
+      dayTotals[dayName].total += expense.amount;
+      dayTotals[dayName].count += 1;
+    });
+
+    return days.map(day => ({
+      day,
+      total: dayTotals[day].total,
+      count: dayTotals[day].count,
+      average: dayTotals[day].count > 0 ? dayTotals[day].total / dayTotals[day].count : 0
+    }));
+  }, [filteredExpenses, t]);
+
+  // Top expenses
+  const topExpenses = useMemo(() => {
+    return [...filteredExpenses]
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 10);
+  }, [filteredExpenses]);
+
   // Get unique categories and members for filters
   const uniqueCategories = useMemo(() => {
     return Array.from(new Set(expenses.map(e => e.category || t.spending.uncategorized)));
@@ -270,36 +423,36 @@ export default function AnalyticsPage() {
     try {
       // Prepare data for export
       const exportData = filteredExpenses.map(expense => ({
-        'Tarih': new Date(expense.date).toLocaleDateString('tr-TR'),
-        'Açıklama': expense.description,
-        'Kategori': expense.category || t.spending.uncategorized,
-        'Üye': expense.user.name,
-        'Tutar': expense.amount,
+        [t.analytics.export.headers.date]: new Date(expense.date).toLocaleDateString('tr-TR'),
+        [t.analytics.export.headers.description]: expense.description,
+        [t.analytics.export.headers.category]: expense.category || t.spending.uncategorized,
+        [t.analytics.export.headers.member]: expense.user.name,
+        [t.analytics.export.headers.amount]: expense.amount,
       }));
 
       // Add summary row
       exportData.push({
-        'Tarih': '',
-        'Açıklama': '',
-        'Kategori': '',
-        'Üye': 'TOPLAM',
-        'Tutar': summaryStats.total,
+        [t.analytics.export.headers.date]: '',
+        [t.analytics.export.headers.description]: '',
+        [t.analytics.export.headers.category]: '',
+        [t.analytics.export.headers.member]: t.analytics.export.headers.total,
+        [t.analytics.export.headers.amount]: summaryStats.total,
       });
 
       // Create workbook
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Harcamalar');
+      XLSX.utils.book_append_sheet(wb, ws, t.analytics.export.summarySheet.expenseSheet);
 
       // Add summary sheet
       const summaryData = [
-        { 'Metrik': 'Toplam Harcama', 'Değer': formatCurrency(summaryStats.total) },
-        { 'Metrik': 'Ortalama Harcama', 'Değer': formatCurrency(summaryStats.average) },
-        { 'Metrik': 'Toplam İşlem', 'Değer': summaryStats.count },
-        { 'Metrik': 'En Çok Harcanan Kategori', 'Değer': summaryStats.topCategory },
+        { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.totalSpending, [t.analytics.export.summarySheet.value]: formatCurrency(summaryStats.total) },
+        { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.averageSpending, [t.analytics.export.summarySheet.value]: formatCurrency(summaryStats.average) },
+        { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.totalTransactions, [t.analytics.export.summarySheet.value]: summaryStats.count },
+        { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.topCategory, [t.analytics.export.summarySheet.value]: summaryStats.topCategory },
       ];
       const ws2 = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, ws2, 'Özet');
+      XLSX.utils.book_append_sheet(wb, ws2, t.analytics.export.summarySheet.name);
 
       // Generate filename with date
       const filename = `${t.analytics.export.filename}-${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -378,7 +531,7 @@ export default function AnalyticsPage() {
           ))}
         </select>
         <p className="mt-2 text-xs text-gray-500">
-          {groups.length} {groups.length === 1 ? 'grup mevcut' : 'grup mevcut'}
+          {t.analytics.groupsAvailable.replace('{count}', groups.length.toString())}
         </p>
       </div>
 
@@ -389,7 +542,7 @@ export default function AnalyticsPage() {
       ) : expenses.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow">
           <p className="text-gray-600 text-lg mb-2">{t.analytics.noExpenses}</p>
-          <p className="text-gray-500 text-sm">Seçili grupta henüz harcama bulunmuyor. Ana sayfadan harcama ekleyebilirsiniz.</p>
+          <p className="text-gray-500 text-sm">{t.analytics.noExpensesInGroup}</p>
         </div>
       ) : (
         <>
@@ -556,7 +709,7 @@ export default function AnalyticsPage() {
             <div className="text-center py-12 bg-white rounded-lg shadow">
               <p className="text-gray-600 text-lg mb-2">{t.analytics.noData}</p>
               <p className="text-gray-500 text-sm mb-4">
-                {expenses.length} harcama var ama seçili filtrelere uymuyor.
+                {expenses.length} {t.analytics.noMatchingExpenses}
               </p>
               <button
                 onClick={clearFilters}
@@ -635,6 +788,274 @@ export default function AnalyticsPage() {
                       <Bar dataKey="amount" fill="#6366f1" name={t.analytics.charts.amount} />
                     </BarChart>
                   </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Monthly Breakdown Section */}
+              {monthlyBreakdown.length > 0 && (
+                <div className="bg-white rounded-lg shadow p-6 mb-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span>📅</span> {t.analytics.monthlyAnalysis.title}
+                  </h3>
+                  <div className="space-y-4">
+                    {monthlyBreakdown.map((month) => (
+                      <details key={month.monthKey} className="border rounded-lg overflow-hidden">
+                        <summary className="bg-gradient-to-r from-indigo-50 to-purple-50 px-4 py-3 cursor-pointer hover:from-indigo-100 hover:to-purple-100 transition-colors">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <span className="font-semibold text-gray-900">{month.monthLabel}</span>
+                              <span className="text-sm text-gray-600 ml-3">
+                                {month.count} {t.analytics.monthlyAnalysis.expenseCount} • {t.analytics.monthlyAnalysis.average}: {formatCurrency(month.avgPerExpense)}
+                              </span>
+                            </div>
+                            <span className="text-xl font-bold text-indigo-600">
+                              {formatCurrency(month.total)}
+                            </span>
+                          </div>
+                        </summary>
+                        <div className="p-4 bg-gray-50">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Members in this month */}
+                            <div>
+                              <h4 className="font-semibold text-sm text-gray-700 mb-2">{t.analytics.monthlyAnalysis.byMembers}</h4>
+                              <div className="space-y-2">
+                                {Object.values(month.members)
+                                  .sort((a, b) => b.total - a.total)
+                                  .map((member) => {
+                                    const percentage = (member.total / month.total) * 100;
+                                    return (
+                                      <div key={member.name} className="bg-white rounded p-2">
+                                        <div className="flex justify-between text-sm mb-1">
+                                          <span className="font-medium">{member.name}</span>
+                                          <span className="font-semibold">{formatCurrency(member.total)}</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                          <div
+                                            className="bg-indigo-600 h-2 rounded-full"
+                                            style={{ width: `${percentage}%` }}
+                                          />
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          {member.count} {t.analytics.monthlyAnalysis.expenseCount} • {percentage.toFixed(1)}%
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                            {/* Categories in this month */}
+                            <div>
+                              <h4 className="font-semibold text-sm text-gray-700 mb-2">{t.analytics.monthlyAnalysis.byCategories}</h4>
+                              <div className="space-y-2">
+                                {Object.entries(month.categories)
+                                  .sort(([, a], [, b]) => b - a)
+                                  .map(([category, amount]) => {
+                                    const percentage = (amount / month.total) * 100;
+                                    return (
+                                      <div key={category} className="bg-white rounded p-2">
+                                        <div className="flex justify-between text-sm mb-1">
+                                          <span className="font-medium">{category}</span>
+                                          <span className="font-semibold">{formatCurrency(amount)}</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                          <div
+                                            className="bg-purple-600 h-2 rounded-full"
+                                            style={{ width: `${percentage}%` }}
+                                          />
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          {percentage.toFixed(1)}% {t.analytics.monthlyAnalysis.ofMonth}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Debt Settlement Section */}
+              {(Array.isArray(debtSettlements) ? false : debtSettlements.settlements.length > 0) && !Array.isArray(debtSettlements) && (
+                <div className="bg-white rounded-lg shadow p-6 mb-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                    <span>💰</span> {t.analytics.debtSettlement.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    {t.analytics.debtSettlement.fairSharePerPerson} <span className="font-semibold">{formatCurrency(debtSettlements.fairShare)}</span>
+                  </p>
+                  
+                  {/* Balance Overview */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                    {debtSettlements.balances.map((balance: any) => (
+                      <div 
+                        key={balance.userId} 
+                        className={`rounded-lg p-3 ${
+                          balance.balance > 0.01 
+                            ? 'bg-green-50 border border-green-200' 
+                            : balance.balance < -0.01 
+                            ? 'bg-red-50 border border-red-200' 
+                            : 'bg-gray-50 border border-gray-200'
+                        }`}
+                      >
+                        <div className="font-medium text-sm">{balance.userName}</div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          {t.analytics.debtSettlement.totalSpent} {formatCurrency(balance.balance + balance.fairShare)}
+                        </div>
+                        <div className={`text-sm font-semibold mt-1 ${
+                          balance.balance > 0.01 ? 'text-green-700' : 
+                          balance.balance < -0.01 ? 'text-red-700' : 'text-gray-700'
+                        }`}>
+                          {balance.balance > 0.01 ? `+${formatCurrency(balance.balance)} ${t.analytics.debtSettlement.creditor}` :
+                           balance.balance < -0.01 ? `${formatCurrency(Math.abs(balance.balance))} ${t.analytics.debtSettlement.debtor}` :
+                           t.analytics.debtSettlement.balanced}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Settlement Transactions */}
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm text-gray-700 mb-2">{t.analytics.debtSettlement.recommendedPayments}</h4>
+                    {debtSettlements.settlements.map((settlement: any, index: number) => (
+                      <div key={index} className="bg-gradient-to-r from-orange-50 to-yellow-50 border-l-4 border-orange-400 rounded-lg p-4">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-3">
+                            <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-medium">
+                              {settlement.from}
+                            </span>
+                            <span className="text-gray-400 text-xl">→</span>
+                            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                              {settlement.to}
+                            </span>
+                          </div>
+                          <span className="text-xl font-bold text-orange-600">
+                            {formatCurrency(settlement.amount)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">
+                          {t.analytics.debtSettlement.shouldPay
+                            .replace('{from}', settlement.from)
+                            .replace('{to}', settlement.to)
+                            .replace('{amount}', formatCurrency(settlement.amount))}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="bg-blue-50 rounded-lg p-3 mt-4">
+                    <div className="flex gap-2 text-xs text-blue-700">
+                      <span>💡</span>
+                      <p>{t.analytics.debtSettlement.helpText}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Insights Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                {/* Day of Week Analysis */}
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <span>📊</span> {t.analytics.dayOfWeek.title}
+                  </h3>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={dayOfWeekData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="day" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value, name) => [
+                          name === 'total' ? formatCurrency(Number(value)) : value,
+                          name === 'total' ? t.analytics.dayOfWeek.totalSpending : t.analytics.dayOfWeek.expenseCount
+                        ]} 
+                      />
+                      <Legend />
+                      <Bar dataKey="total" fill="#6366f1" name={t.analytics.dayOfWeek.totalSpending} />
+                      <Bar dataKey="count" fill="#8b5cf6" name={t.analytics.dayOfWeek.expenseCount} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Top 10 Expenses */}
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <span>🏆</span> {t.analytics.topExpenses.title}
+                  </h3>
+                  <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                    {topExpenses.map((expense, index) => (
+                      <div key={expense.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors">
+                        <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                          index === 0 ? 'bg-yellow-400 text-yellow-900' :
+                          index === 1 ? 'bg-gray-300 text-gray-700' :
+                          index === 2 ? 'bg-orange-300 text-orange-900' :
+                          'bg-gray-200 text-gray-600'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">
+                            {expense.description}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {expense.user.name} • {new Date(expense.date).toLocaleDateString('tr-TR')}
+                          </div>
+                        </div>
+                        <div className="text-sm font-bold text-gray-900">
+                          {formatCurrency(expense.amount)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Category Average Spending */}
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <span>📈</span> {t.analytics.categoryAverages.title}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {chartData.categoryData.map((cat, index) => {
+                    const categoryExpenses = filteredExpenses.filter(e => 
+                      (e.category || t.spending.uncategorized) === cat.name
+                    );
+                    const avgPerExpense = categoryExpenses.length > 0 ? cat.value / categoryExpenses.length : 0;
+                    
+                    return (
+                      <div key={cat.name} className="bg-gradient-to-br from-gray-50 to-white border rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-semibold text-gray-900">{cat.name}</h4>
+                          <div 
+                            className="w-8 h-8 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          />
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">{t.analytics.categoryAverages.total}</span>
+                            <span className="font-semibold">{formatCurrency(cat.value)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">{t.analytics.categoryAverages.count}</span>
+                            <span className="font-semibold">{categoryExpenses.length}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">{t.analytics.categoryAverages.average}</span>
+                            <span className="font-semibold">{formatCurrency(avgPerExpense)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-500 pt-1 border-t">
+                            <span>{t.analytics.categoryAverages.percentageOfTotal}</span>
+                            <span>{((cat.value / summaryStats.total) * 100).toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

@@ -315,6 +315,24 @@ export const tr = {
       success: 'Excel dosyası başarıyla indirildi!',
       error: 'Dışa aktarma başarısız',
       filename: 'harcama-analizi',
+      headers: {
+        date: 'Tarih',
+        description: 'Açıklama',
+        category: 'Kategori',
+        member: 'Üye',
+        amount: 'Tutar',
+        total: 'TOPLAM',
+      },
+      summarySheet: {
+        name: 'Özet',
+        expenseSheet: 'Harcamalar',
+        metric: 'Metrik',
+        value: 'Değer',
+        totalSpending: 'Toplam Harcama',
+        averageSpending: 'Ortalama Harcama',
+        totalTransactions: 'Toplam İşlem',
+        topCategory: 'En Çok Harcanan Kategori',
+      },
     },
     
     // Table
@@ -341,6 +359,64 @@ export const tr = {
       spendingDecrease: 'Önceki Döneme Göre Azalma',
       noChange: 'Değişiklik Yok',
     },
+    
+    // Monthly Analysis
+    monthlyAnalysis: {
+      title: 'Aylık Harcama Analizi',
+      expenseCount: 'harcama',
+      average: 'Ortalama',
+      byMembers: 'Üyelere Göre',
+      byCategories: 'Kategorilere Göre',
+      ofMonth: 'of month',
+    },
+    
+    // Debt Settlement
+    debtSettlement: {
+      title: 'Hesaplaşma Önerileri',
+      fairSharePerPerson: 'Adil paylaşım için kişi başı:',
+      totalSpent: 'Toplam harcama:',
+      creditor: 'alacaklı',
+      debtor: 'borçlu',
+      balanced: 'Dengede',
+      recommendedPayments: 'Önerilen Ödemeler',
+      shouldPay: '{from}, {to} kişisine {amount} ödeme yapmalı',
+      helpText: 'Bu öneriler, grup harcamalarının üyeler arasında eşit paylaşılması için gereken minimum işlem sayısını gösterir.',
+    },
+    
+    // Day of Week
+    dayOfWeek: {
+      title: 'Haftanın Günlerine Göre',
+      totalSpending: 'Toplam Harcama',
+      expenseCount: 'Harcama Sayısı',
+      days: {
+        sunday: 'Pazar',
+        monday: 'Pazartesi',
+        tuesday: 'Salı',
+        wednesday: 'Çarşamba',
+        thursday: 'Perşembe',
+        friday: 'Cuma',
+        saturday: 'Cumartesi',
+      },
+    },
+    
+    // Top Expenses
+    topExpenses: {
+      title: 'En Yüksek 10 Harcama',
+    },
+    
+    // Category Averages
+    categoryAverages: {
+      title: 'Kategori Bazlı Ortalamalar',
+      total: 'Toplam:',
+      count: 'Harcama sayısı:',
+      average: 'Ortalama:',
+      percentageOfTotal: 'Toplam içinde:',
+    },
+    
+    // Misc
+    groupsAvailable: '{count} grup mevcut',
+    noExpensesInGroup: 'Seçili grupta henüz harcama bulunmuyor. Ana sayfadan harcama ekleyebilirsiniz.',
+    noMatchingExpenses: 'harcama var ama seçili filtrelere uymuyor.',
     
     // Loading & Errors
     loading: 'Analiz verileri yükleniyor...',
