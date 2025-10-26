@@ -95,9 +95,5 @@ export const expenseApi = {
     userId: string;
     groupId: string;
   }) => api.put<Expense>(`/expenses/${id}`, data),
-  uploadInvoice: (formData: FormData) => 
-    api.post('/expenses/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }),
   delete: (id: string) => api.delete(`/expenses/${id}`),
 };

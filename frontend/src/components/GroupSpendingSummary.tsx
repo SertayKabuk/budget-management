@@ -25,6 +25,7 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
   const { t } = useTranslation();
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('currentMonth');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const { data: allExpenses, isLoading } = useQuery({
     queryKey: ['expenses', groupId],
@@ -170,6 +171,29 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
   };
 
   return (
+    <>
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-full">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute -top-10 right-0 text-white text-2xl hover:text-gray-300"
+            >
+              ✕
+            </button>
+            <AuthenticatedImage
+              imageUrl={selectedImage}
+              alt="Receipt"
+              className="max-w-full max-h-screen object-contain rounded"
+            />
+          </div>
+        </div>
+      )}
+
     <div className="bg-white rounded-lg shadow p-4 sm:p-6">
       <div className="mb-4">
         <h3 className="text-base sm:text-lg font-semibold mb-3">{t.spending.title}</h3>
@@ -298,6 +322,7 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
                                     imageUrl={expense.imageUrl}
                                     alt="Receipt"
                                     className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded cursor-pointer hover:opacity-75 transition-opacity"
+                                    onClick={() => setSelectedImage(expense.imageUrl || null)}
                                   />
                                 </div>
                               )}
@@ -343,5 +368,6 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
         })}
       </div>
     </div>
+    </>
   );
 }

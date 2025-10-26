@@ -1,7 +1,5 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../prisma';
-import { upload } from '../middleware/upload.middleware';
-import { parseInvoice } from '../services/openai.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import fs from 'fs';
 import path from 'path';
@@ -216,62 +214,8 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/upload', upload.single('invoice'), async (req: Request, res: Response) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    const { userId, groupId } = req.body;
-    const authenticatedUserId = req.jwtUser?.id;
-
-    if (!authenticatedUserId) {
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
-
-    if (!userId || !groupId) {
-      return res.status(400).json({ error: 'Missing userId or groupId' });
-    }
-
-    // Verify user is a member of the group
-    const groupMembership = await prisma.groupMember.findFirst({
-      where: {
-        groupId: groupId,
-        userId: authenticatedUserId
-      }
-    });
-
-    if (!groupMembership) {
-      return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
-    }
-
-    const imageBuffer = fs.readFileSync(req.file.path);
-    const base64Image = imageBuffer.toString('base64');
-
-    const parsedData = await parseInvoice(base64Image);
-
-    const expense = await prisma.expense.create({
-      data: {
-        amount: parsedData.amount || 0,
-        description: parsedData.description || 'Invoice expense',
-        category: parsedData.category || null,
-        date: parsedData.date ? new Date(parsedData.date) : new Date(),
-        imageUrl: `/uploads/${req.file.filename}`,
-        userId,
-        groupId
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        group: { select: { id: true, name: true } }
-      }
-    });
-
-    res.status(201).json({ expense, parsedData });
-  } catch (error) {
-    console.error('Error processing invoice:', error);
-    res.status(500).json({ error: 'Failed to process invoice' });
-  }
-});
+// Invoice upload is now handled through WebSocket chat interface
+// This endpoint is deprecated and kept only for backward compatibility
 
 router.put('/:id', async (req: Request, res: Response) => {
   try {

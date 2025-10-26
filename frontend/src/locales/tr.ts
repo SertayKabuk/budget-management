@@ -210,6 +210,10 @@ export const tr = {
     emptyStateTip: 'Deneyin: "market alışverişine 50 TL harcadım" veya "akşam yemeğine 30 TL ödedim"',
     expenseCreated: '✅ Harcama oluşturuldu',
     error: '❌',
+    imageMessage: 'Fatura fotoğrafı gönderildi',
+    exampleMessage: '💬 "Market alışverişine 50 TL harcadım"',
+    exampleUpload: '📸 Fatura fotoğrafı yükle',
+    exampleCamera: '📷 Fiş taramak için kamera kullan',
   },
 
   // Analytics Page

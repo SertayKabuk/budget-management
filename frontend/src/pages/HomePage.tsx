@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { groupApi } from '../services/api';
-import ChatInterface from '../components/ChatInterface';
-import InvoiceUpload from '../components/InvoiceUpload';
+import MultimodalChatInterface from '../components/MultimodalChatInterface';
 import GroupSpendingSummary from '../components/GroupSpendingSummary';
 import { getSocket } from '../services/socket';
 import { useAuth } from '../contexts/AuthContext';
@@ -58,10 +57,6 @@ export default function HomePage() {
     };
   }, [selectedGroupId]);
 
-  const handleRefresh = () => {
-    // Refresh will be handled by react-query invalidation from socket events
-  };
-
   return (
     <div className="px-3 sm:px-4 py-4 sm:py-6 max-w-5xl mx-auto">
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">{t.home.title}</h1>
@@ -98,25 +93,9 @@ export default function HomePage() {
             <GroupSpendingSummary groupId={selectedGroupId} />
           </div>
 
-          {/* Upload Invoice */}
-          <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6">
-            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{t.home.uploadInvoice}</h3>
-            <InvoiceUpload 
-              userId={user.id} 
-              groupId={selectedGroupId} 
-              onUploadSuccess={handleRefresh}
-            />
-          </div>
-
-          {/* AI Chat Assistant */}
+          {/* Unified Multimodal Chat Interface */}
           <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
-              {t.home.chatWithAI}
-            </h3>
-            <p className="text-sm text-gray-600 mb-3 sm:mb-4">
-              {t.home.chatSubtitle}
-            </p>
-            <ChatInterface 
+            <MultimodalChatInterface 
               groupId={selectedGroupId} 
               userId={user.id}
               userName={user.name}

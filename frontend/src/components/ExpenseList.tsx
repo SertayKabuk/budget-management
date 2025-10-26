@@ -330,7 +330,7 @@ export default function ExpenseList({ expenses, groupId }: Props) {
   return (
     <>
       {/* Image Modal */}
-      {selectedImage && selectedImageBlob && (
+      {selectedImage && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedImage(null)}
@@ -342,12 +342,19 @@ export default function ExpenseList({ expenses, groupId }: Props) {
             >
               ✕
             </button>
-            <img 
-              src={selectedImageBlob} 
-              alt="Invoice" 
-              className="max-w-full max-h-screen object-contain rounded"
-              onClick={(e) => e.stopPropagation()}
-            />
+            {selectedImageBlob ? (
+              <img 
+                src={selectedImageBlob} 
+                alt="Invoice" 
+                className="max-w-full max-h-screen object-contain rounded"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <div className="text-white text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-2"></div>
+                <p>Loading image...</p>
+              </div>
+            )}
           </div>
         </div>
       )}

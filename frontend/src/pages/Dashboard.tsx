@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { groupApi, userApi } from '../services/api';
-import ChatInterface from '../components/ChatInterface';
+import MultimodalChatInterface from '../components/MultimodalChatInterface';
 
 export default function Dashboard() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
@@ -180,7 +180,7 @@ export default function Dashboard() {
               {users?.find(u => u.id === selectedUserId)?.name}
             </p>
           </div>
-          <ChatInterface 
+          <MultimodalChatInterface 
             groupId={selectedGroupId} 
             userId={selectedUserId}
             userName={users?.find(u => u.id === selectedUserId)?.name || 'User'}
