@@ -4,6 +4,7 @@ export const tr = {
   nav: {
     title: 'Bütçe Yönetimi',
     analytics: 'Analiz',
+    auditLogs: 'Denetim Kayıtları',
     admin: 'Yönetim',
     logout: 'Çıkış Yap',
   },
@@ -97,6 +98,18 @@ export const tr = {
     backToHome: '← Ana Sayfaya Dön',
     expenseHistory: 'Harcama Geçmişi',
     loading: 'Yükleniyor...',
+    edit: {
+      title: 'Grubu Düzenle',
+      nameLabel: 'Grup Adı',
+      namePlaceholder: 'Grup adını girin',
+      descriptionLabel: 'Açıklama (İsteğe Bağlı)',
+      descriptionPlaceholder: 'Grup açıklaması girin',
+      save: 'Kaydet',
+      saving: 'Kaydediliyor...',
+      cancel: 'İptal',
+      nameRequired: 'Grup adı gereklidir',
+      editButton: 'Grubu düzenle',
+    },
   },
 
   // Group Summary
@@ -206,6 +219,7 @@ export const tr = {
     disconnected: 'Bağlantı Kesildi',
     placeholder: 'Bir mesaj yazın... (örn: öğle yemeğine 20 TL harcadım)',
     send: 'Gönder',
+    thinking: 'Düşünüyor...',
     emptyState: 'AI asistanı ile sohbete başlayın!',
     emptyStateTip: 'Deneyin: "market alışverişine 50 TL harcadım" veya "akşam yemeğine 30 TL ödedim"',
     expenseCreated: '✅ Harcama oluşturuldu',
@@ -311,6 +325,64 @@ export const tr = {
     error: 'Veriler yüklenirken hata oluştu',
     noData: 'Seçili filtrelerde veri bulunamadı',
     noExpenses: 'Bu grupta henüz harcama yok',
+  },
+
+  // Audit Logs Page
+  auditLogs: {
+    title: 'Denetim Kayıtları',
+    subtitle: 'Gruplarınızdaki tüm aktiviteleri ve değişiklikleri görüntüleyin',
+    subtitleAdmin: 'Sistemdeki tüm aktiviteleri ve değişiklikleri görüntüleyin',
+    accessDenied: 'Erişim Reddedildi',
+    accessDeniedMessage: 'Denetim kayıtlarını görüntülemek için grup yöneticisi olmanız gerekir.',
+    
+    // Filters
+    filters: {
+      group: 'Grup',
+      allGroups: 'Tüm Gruplar',
+      action: 'İşlem',
+      allActions: 'Tüm İşlemler',
+      entityType: 'Varlık Türü',
+      allTypes: 'Tüm Türler',
+    },
+    
+    // Actions
+    actions: {
+      CREATE: 'Oluştur',
+      UPDATE: 'Güncelle',
+      DELETE: 'Sil',
+    },
+    
+    // Entity Types
+    entityTypes: {
+      User: 'Kullanıcı',
+      Group: 'Grup',
+      GroupMember: 'Grup Üyesi',
+      Expense: 'Harcama',
+    },
+    
+    // Table
+    table: {
+      timestamp: 'Zaman',
+      action: 'İşlem',
+      entityType: 'Varlık Türü',
+      user: 'Kullanıcı',
+      details: 'Detaylar',
+      hideDetails: '▼ Detayları Gizle',
+      showDetails: '▶ Detayları Göster',
+      entityId: 'Varlık ID',
+      ipAddress: 'IP Adresi',
+      createdValues: 'Oluşturulan Değerler',
+      deletedValues: 'Silinen Değerler',
+      changes: 'Değişiklikler',
+      oldValue: 'Eski',
+      newValue: 'Yeni',
+      system: 'Sistem',
+    },
+    
+    // States
+    loading: 'Denetim kayıtları yükleniyor...',
+    error: 'Kayıtlar yüklenemedi',
+    noResults: 'Filtrelerinize uygun denetim kaydı bulunamadı.',
   },
 
   // Common

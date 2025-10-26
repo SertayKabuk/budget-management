@@ -1,6 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import { chatWithAIAndTools } from '../services/openai.service';
+import { chatWithAIAndTools, chatWithAIAndToolsStream } from '../services/openai.service';
 import { saveBase64Image } from '../utils/fileUtils';
 import prisma from '../prisma';
 
@@ -96,7 +96,7 @@ async function executeCreateExpense(
     throw new Error('Access denied: You are not a member of this group');
   }
 
-  const expense = await prisma.expense.create({
+  const expense = await prisma.expense.createWithAudit({
     data: {
       amount: args.amount,
       description: args.description,
@@ -611,7 +611,7 @@ Args: { query_description: "debt calculation who owes whom" }
 Expected Result: Debt settlement showing who should pay whom how much
 
 IMPORTANT GUIDELINES:
-- Understand both Turkish and English queries
+- Understand both Turkish and English queries. Default to Turkish in responses.
 - Accept amounts in formats like "50 TL", "50 lira", "50₺" or just "50"
 - When querying, use query_database tool for any question about past expenses, totals, statistics
 - When creating, use create_expense tool for new spending mentions
@@ -622,7 +622,10 @@ IMPORTANT GUIDELINES:
 - Be conversational and provide insights in a friendly manner
 - Format currency as Turkish Lira (₺) in responses
 - When showing lists, limit to reasonable numbers (5-20 items)
-- Provide context and interpretation with query results`
+- Provide context and interpretation with query results
+
+RESPONSE FORMAT:
+- Use markdown formatting for tabular data.`
           });
         }
 
@@ -761,9 +764,27 @@ IMPORTANT GUIDELINES:
             }
           }
 
-          // Get final response from AI after tool execution
-          const finalResponse = await chatWithAIAndTools(history, tools);
-          const finalMessage = finalResponse.choices[0]?.message?.content || 'Expense recorded!';
+          // Get final response from AI after tool execution (with streaming)
+          const stream = await chatWithAIAndToolsStream(history, tools);
+          let finalMessage = '';
+          
+          for await (const chunk of stream) {
+            const delta = chunk.choices[0]?.delta;
+            if (delta?.content) {
+              finalMessage += delta.content;
+              // Stream each chunk to the client
+              socket.emit('chat-stream', {
+                content: delta.content,
+                done: false,
+              });
+            }
+          }
+          
+          // Signal completion
+          socket.emit('chat-stream', {
+            content: '',
+            done: true,
+          });
           
           history.push({ role: 'assistant', content: finalMessage });
           conversationHistory.set(socket.id, history);
@@ -773,8 +794,28 @@ IMPORTANT GUIDELINES:
             timestamp: new Date(),
           });
         } else {
-          // No tool call, just a regular response
-          const aiResponse = assistantMessage.content || '';
+          // No tool call, stream the regular response
+          const stream = await chatWithAIAndToolsStream(history, tools);
+          let aiResponse = '';
+          
+          for await (const chunk of stream) {
+            const delta = chunk.choices[0]?.delta;
+            if (delta?.content) {
+              aiResponse += delta.content;
+              // Stream each chunk to the client
+              socket.emit('chat-stream', {
+                content: delta.content,
+                done: false,
+              });
+            }
+          }
+          
+          // Signal completion
+          socket.emit('chat-stream', {
+            content: '',
+            done: true,
+          });
+          
           history.push({ role: 'assistant', content: aiResponse });
           conversationHistory.set(socket.id, history);
 

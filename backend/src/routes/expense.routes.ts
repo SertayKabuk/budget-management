@@ -192,7 +192,7 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
     }
 
-    const expense = await prisma.expense.create({
+    const expense = await prisma.expense.createWithAudit({
       data: {
         amount: parseFloat(amount),
         description,
@@ -248,7 +248,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
     }
 
-    const expense = await prisma.expense.update({
+    const expense = await prisma.expense.updateWithAudit({
       where: { id },
       data: {
         amount: amount ? parseFloat(amount) : undefined,
@@ -299,7 +299,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
     }
 
-    await prisma.expense.delete({
+    await prisma.expense.deleteWithAudit({
       where: { id }
     });
 

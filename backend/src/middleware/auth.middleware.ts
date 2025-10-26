@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { setAuditContext, clearAuditContext } from '../prisma';
 
 export interface JWTUser {
   id: string;
@@ -29,6 +30,15 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
     const decoded = jwt.verify(token, secret) as JWTUser;
     req.jwtUser = decoded;
+    
+    // Set audit context for this request
+    setAuditContext({
+      userId: decoded.id,
+      userName: decoded.name,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+    });
+    
     next();
   } catch (error) {
     return res.status(403).json({ error: 'Invalid or expired token.' });
@@ -56,9 +66,25 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction) =>
       const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
       const decoded = jwt.verify(token, secret) as JWTUser;
       req.jwtUser = decoded;
+      
+      // Set audit context for this request
+      setAuditContext({
+        userId: decoded.id,
+        userName: decoded.name,
+        ipAddress: req.ip || req.connection?.remoteAddress,
+        userAgent: req.headers['user-agent'],
+      });
     } catch (error) {
       // Token invalid but continue anyway
     }
   }
+  next();
+};
+
+// Middleware to clear audit context after request
+export const clearAuditContextMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  res.on('finish', () => {
+    clearAuditContext();
+  });
   next();
 };

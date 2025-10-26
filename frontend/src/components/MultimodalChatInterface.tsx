@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { getSocket } from '../services/socket';
 import { useTranslation } from '../contexts/LanguageContext';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
   imagePreview?: string; // For displaying user-uploaded images
+  isStreaming?: boolean; // To indicate if message is being streamed
 }
 
 interface Props {
@@ -20,6 +23,7 @@ export default function MultimodalChatInterface({ groupId, userId, userName }: P
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isConnected, setIsConnected] = useState(false);
+  const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [useCamera, setUseCamera] = useState(false);
@@ -48,10 +52,47 @@ export default function MultimodalChatInterface({ groupId, userId, userName }: P
     });
 
     socket.on('chat-response', (data: { message: string; timestamp: Date }) => {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: data.message, timestamp: new Date(data.timestamp) },
-      ]);
+      setIsWaitingForResponse(false);
+      setMessages((prev) => {
+        // Check if we already have a streaming message, update it
+        const lastMessage = prev[prev.length - 1];
+        if (lastMessage && lastMessage.role === 'assistant' && lastMessage.isStreaming) {
+          return [
+            ...prev.slice(0, -1),
+            { ...lastMessage, content: data.message, timestamp: new Date(data.timestamp), isStreaming: false },
+          ];
+        }
+        // Otherwise add a new message
+        return [
+          ...prev,
+          { role: 'assistant', content: data.message, timestamp: new Date(data.timestamp) },
+        ];
+      });
+    });
+
+    socket.on('chat-stream', (data: { content: string; done: boolean }) => {
+      if (data.done) {
+        // Streaming complete
+        setIsWaitingForResponse(false);
+      } else {
+        // Update or create streaming message
+        setMessages((prev) => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.role === 'assistant' && lastMessage.isStreaming) {
+            // Append to existing streaming message
+            return [
+              ...prev.slice(0, -1),
+              { ...lastMessage, content: lastMessage.content + data.content },
+            ];
+          } else {
+            // Create new streaming message
+            return [
+              ...prev,
+              { role: 'assistant', content: data.content, timestamp: new Date(), isStreaming: true },
+            ];
+          }
+        });
+      }
     });
 
     socket.on('expense-created', (data: any) => {
@@ -76,6 +117,7 @@ export default function MultimodalChatInterface({ groupId, userId, userName }: P
       socket.off('connect');
       socket.off('disconnect');
       socket.off('chat-response');
+      socket.off('chat-stream');
       socket.off('expense-created');
       socket.off('chat-error');
       // Clean up camera stream
@@ -172,6 +214,7 @@ export default function MultimodalChatInterface({ groupId, userId, userName }: P
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    setIsWaitingForResponse(true);
 
     const socket = getSocket();
     socket.emit('chat-message', {
@@ -278,13 +321,40 @@ export default function MultimodalChatInterface({ groupId, userId, userName }: P
                   className="rounded mb-2 max-w-full max-h-48 object-contain"
                 />
               )}
-              <p className="whitespace-pre-wrap text-sm sm:text-base">{message.content}</p>
+              {message.role === 'assistant' ? (
+                <div className="chat-markdown">
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <p className="whitespace-pre-wrap text-sm sm:text-base">{message.content}</p>
+              )}
+              {message.isStreaming && (
+                <span className="inline-block ml-1 cursor-blink">▋</span>
+              )}
               <p className="text-xs mt-1 opacity-70">
                 {new Date(message.timestamp).toLocaleTimeString()}
               </p>
             </div>
           </div>
         ))}
+        {isWaitingForResponse && messages.length > 0 && !messages[messages.length - 1].isStreaming && (
+          <div className="flex justify-start">
+            <div className="max-w-[85%] sm:max-w-[70%] rounded-lg px-3 sm:px-4 py-2 bg-gray-200 text-gray-900">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                  <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                  <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                </div>
+                <span className="text-sm text-gray-600">{t.chat?.thinking || 'Thinking...'}</span>
+              </div>
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 

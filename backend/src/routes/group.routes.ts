@@ -161,7 +161,7 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Group name is required' });
     }
 
-    const group = await prisma.group.create({
+    const group = await prisma.group.createWithAudit({
       data: { name, description }
     });
 
@@ -169,6 +169,47 @@ router.post('/', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error creating group:', error);
     res.status(500).json({ error: 'Failed to create group' });
+  }
+});
+
+router.put('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description } = req.body;
+    const userId = req.jwtUser?.id;
+    const userRole = req.jwtUser?.role;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    if (!name) {
+      return res.status(400).json({ error: 'Group name is required' });
+    }
+
+    // Admin users can update any group, regular users must be members
+    if (userRole !== 'admin') {
+      const groupMembership = await prisma.groupMember.findFirst({
+        where: {
+          groupId: id,
+          userId: userId
+        }
+      });
+
+      if (!groupMembership) {
+        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      }
+    }
+
+    const group = await prisma.group.updateWithAudit({
+      where: { id },
+      data: { name, description }
+    });
+
+    res.json(group);
+  } catch (error) {
+    console.error('Error updating group:', error);
+    res.status(500).json({ error: 'Failed to update group' });
   }
 });
 
@@ -210,7 +251,7 @@ router.post('/:id/members', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User to add not found' });
     }
 
-    const member = await prisma.groupMember.create({
+    const member = await prisma.groupMember.createWithAudit({
       data: {
         groupId: id,
         userId,
@@ -225,6 +266,44 @@ router.post('/:id/members', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error adding member:', error);
     res.status(500).json({ error: 'Failed to add member' });
+  }
+});
+
+router.get('/:id/members', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.jwtUser?.id;
+    const userRole = req.jwtUser?.role;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Admin users can access any group, regular users must be members
+    if (userRole !== 'admin') {
+      const groupMembership = await prisma.groupMember.findFirst({
+        where: {
+          groupId: id,
+          userId: userId
+        }
+      });
+
+      if (!groupMembership) {
+        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      }
+    }
+
+    const members = await prisma.groupMember.findMany({
+      where: { groupId: id },
+      include: {
+        user: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    res.json(members);
+  } catch (error) {
+    console.error('Error fetching group members:', error);
+    res.status(500).json({ error: 'Failed to fetch group members' });
   }
 });
 

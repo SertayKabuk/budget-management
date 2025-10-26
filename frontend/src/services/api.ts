@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Group, Expense } from '../types';
+import type { User, Group, Expense, AuditLog, GroupMember } from '../types';
 import { config } from '../config/runtime';
 
 const API_URL = config.apiUrl;
@@ -55,7 +55,7 @@ api.interceptors.response.use(
 );
 
 // Re-export types
-export type { User, Group, Expense };
+export type { User, Group, Expense, AuditLog, GroupMember };
 
 export const userApi = {
   getAll: () => api.get<User[]>('/users'),
@@ -69,8 +69,11 @@ export const groupApi = {
   getAll: () => api.get<Group[]>('/groups'),
   getById: (id: string) => api.get<Group>(`/groups/${id}`),
   getSummary: (id: string) => api.get(`/groups/${id}/summary`),
+  getMembers: (groupId: string) => api.get<GroupMember[]>(`/groups/${groupId}/members`),
   create: (data: { name: string; description?: string }) => 
     api.post<Group>('/groups', data),
+  update: (id: string, data: { name: string; description?: string }) =>
+    api.put<Group>(`/groups/${id}`, data),
   addMember: (groupId: string, userId: string, role?: string) =>
     api.post(`/groups/${groupId}/members`, { userId, role }),
 };
@@ -96,4 +99,21 @@ export const expenseApi = {
     groupId: string;
   }) => api.put<Expense>(`/expenses/${id}`, data),
   delete: (id: string) => api.delete(`/expenses/${id}`),
+};
+
+export const auditApi = {
+  getAll: (params?: {
+    limit?: number;
+    entityType?: string;
+    entityId?: string;
+    userId?: string;
+    action?: string;
+  }) => api.get<AuditLog[]>('/audit', { params }),
+  getForEntity: (entityType: string, entityId: string, limit?: number) =>
+    api.get<AuditLog[]>(`/audit/entity/${entityType}/${entityId}`, { params: { limit } }),
+  getByUser: (userId: string, limit?: number) =>
+    api.get<AuditLog[]>(`/audit/user/${userId}`, { params: { limit } }),
+  getStats: () => api.get('/audit/stats'),
+  getChanges: (entityType: string, entityId: string) =>
+    api.get(`/audit/changes/${entityType}/${entityId}`),
 };

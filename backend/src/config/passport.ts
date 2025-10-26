@@ -32,7 +32,7 @@ passport.use(
 
         if (user) {
           // Update existing user with Google info
-          user = await prisma.user.update({
+          user = await prisma.user.updateWithAudit({
             where: { email },
             data: {
               googleId,
@@ -43,7 +43,7 @@ passport.use(
           });
         } else {
           // Create new user
-          user = await prisma.user.create({
+          user = await prisma.user.createWithAudit({
             data: {
               email,
               name: name || 'User',

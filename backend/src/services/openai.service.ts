@@ -46,3 +46,23 @@ export async function chatWithAIAndTools(
 
   return response;
 }
+
+// Streaming version for better UX
+export async function chatWithAIAndToolsStream(
+  messages: Array<{ role: string; content: string | Array<any> }>,
+  tools: Array<any>
+) {
+  if (!client) {
+    throw new Error('Azure OpenAI client not configured');
+  }
+
+  const stream = await client.chat.completions.create({
+    model: deploymentName,
+    messages: messages as any,
+    tools: tools,
+    tool_choice: 'auto',
+    stream: true,
+  });
+
+  return stream;
+}

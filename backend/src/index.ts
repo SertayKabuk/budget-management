@@ -8,8 +8,9 @@ import expenseRoutes from './routes/expense.routes';
 import groupRoutes from './routes/group.routes';
 import userRoutes from './routes/user.routes';
 import authRoutes from './routes/auth.routes';
+import auditRoutes from './routes/audit.routes';
 import { setupWebSocket } from './websocket/socket';
-import { authenticateToken } from './middleware/auth.middleware';
+import { authenticateToken, clearAuditContextMiddleware } from './middleware/auth.middleware';
 
 dotenv.config();
 
@@ -29,6 +30,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
+// Clear audit context after each request
+app.use(clearAuditContextMiddleware);
 // Protect uploads directory with authentication
 app.use('/uploads', authenticateToken, express.static('uploads'));
 
@@ -40,6 +43,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/audit', auditRoutes);
 
 setupWebSocket(io);
 

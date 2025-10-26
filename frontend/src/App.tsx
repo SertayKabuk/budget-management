@@ -12,6 +12,7 @@ import LoginPage from './pages/LoginPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import UserRoleManagementPage from './pages/UserRoleManagementPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import AuditLogsPage from './pages/AuditLogsPage';
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,12 @@ function AppContent() {
                     className="flex items-center px-2 py-2 text-gray-600 hover:text-gray-900 text-sm"
                   >
                     📊 {t.nav.analytics}
+                  </Link>
+                  <Link 
+                    to="/audit-logs" 
+                    className="flex items-center px-2 py-2 text-gray-600 hover:text-gray-900 text-sm"
+                  >
+                    📜 {t.nav.auditLogs}
                   </Link>
                   {isAdmin && (
                     <Link 
@@ -108,6 +115,13 @@ function AppContent() {
               >
                 📊 {t.nav.analytics}
               </Link>
+              <Link
+                to="/audit-logs"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                📜 {t.nav.auditLogs}
+              </Link>
               {isAdmin && (
                 <Link
                   to="/admin"
@@ -171,6 +185,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <AnalyticsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/audit-logs"
+            element={
+              <ProtectedRoute>
+                <AuditLogsPage />
               </ProtectedRoute>
             }
           />

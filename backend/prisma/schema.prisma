@@ -67,3 +67,21 @@ model Expense {
   group Group @relation(fields: [groupId], references: [id])
 }
 
+model AuditLog {
+  id          String   @id @default(uuid())
+  entityType  String   // User, Group, GroupMember, Expense
+  entityId    String   // ID of the affected entity
+  action      String   // CREATE, UPDATE, DELETE
+  userId      String?  // Who made the change (nullable for system actions)
+  userName    String?  // Snapshot of user name at time of action
+  oldValues   Json?    // Previous state (for UPDATE/DELETE)
+  newValues   Json?    // New state (for CREATE/UPDATE)
+  timestamp   DateTime @default(now())
+  ipAddress   String?
+  userAgent   String?
+  
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([timestamp])
+}
+

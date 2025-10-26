@@ -76,7 +76,7 @@ router.patch('/:id/role', requireAdmin, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'You cannot demote yourself from admin.' });
     }
 
-    const user = await prisma.user.update({
+    const user = await prisma.user.updateWithAudit({
       where: { id },
       data: { role },
       select: {

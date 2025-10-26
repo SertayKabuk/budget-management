@@ -23,3 +23,27 @@ export interface Expense {
   user: User;
   group: Group;
 }
+
+export interface AuditLog {
+  id: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  userId?: string;
+  userName?: string;
+  oldValues?: any;
+  newValues?: any;
+  timestamp: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+export interface GroupMember {
+  id: string;
+  userId: string;
+  groupId: string;
+  role: string;
+  joinedAt: string;
+  user?: User;
+  group?: Group;
+}
