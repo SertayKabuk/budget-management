@@ -173,7 +173,7 @@ export default function ExpenseList({ groupId }: Props) {
       amount: expense.amount,
       description: expense.description,
       category: expense.category || '',
-      date: new Date(expense.date).toISOString().split('T')[0],
+      date: expense.date ? new Date(expense.date).toISOString().split('T')[0] : '',
     });
   };
 
