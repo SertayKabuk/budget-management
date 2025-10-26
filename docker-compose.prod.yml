@@ -1,74 +1,74 @@
-version: '3.8'
+version: "3"
 
 services:
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: budget-backend-prod
-    restart: unless-stopped
-    env_file:
-      - .env
+    container_name: budget_backend_container
+    expose:
+      - 3001
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+      - "traefik.enable=true"
+      - "traefik.http.routers.budget-backend.entrypoints=websecure"
+      - "traefik.http.routers.budget-backend.rule=Host(`budget-api.sertay.com`)"
+      - "traefik.http.routers.budget-backend.tls.certresolver=myresolver"
+      - "traefik.docker.network=traefik_network"
+      - "traefik.http.services.budget-backend.loadbalancer.server.port=3001"
+      # Enable CORS headers
+      - "traefik.http.middlewares.budget-backend-cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS,PATCH"
+      - "traefik.http.middlewares.budget-backend-cors.headers.accesscontrolalloworiginlist=https://budget.sertay.com"
+      - "traefik.http.middlewares.budget-backend-cors.headers.accesscontrolallowcredentials=true"
+      - "traefik.http.middlewares.budget-backend-cors.headers.accesscontrolallowheaders=*"
+      - "traefik.http.routers.budget-backend.middlewares=budget-backend-cors"
+    image: ghcr.io/sertaykabuk/budget-management/backend:latest
     environment:
-      - NODE_ENV=production
-      - PORT=3001
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: ${DATABASE_URL}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      BACKEND_URL: ${BACKEND_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      AZURE_OPENAI_USE_API_KEY: ${AZURE_OPENAI_USE_API_KEY}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY}
+      AZURE_OPENAI_DEPLOYMENT_NAME: ${AZURE_OPENAI_DEPLOYMENT_NAME}
+      JWT_SECRET: ${JWT_SECRET}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      UPLOAD_DIR: ${UPLOAD_DIR}
     volumes:
       - backend-uploads:/app/uploads
-    labels:
-      # You will configure these Traefik labels for your production domain
-      - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`api.yourdomain.com`)"
-      - "traefik.http.routers.backend.entrypoints=websecure"
-      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.backend.loadbalancer.server.port=3001"
-      # Enable CORS headers if needed
-      - "traefik.http.middlewares.backend-cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS,PATCH"
-      - "traefik.http.middlewares.backend-cors.headers.accesscontrolalloworiginlist=${FRONTEND_URL}"
-      - "traefik.http.middlewares.backend-cors.headers.accesscontrolallowcredentials=true"
-      - "traefik.http.middlewares.backend-cors.headers.accesscontrolallowheaders=*"
-      - "traefik.http.routers.backend.middlewares=backend-cors"
     networks:
-      - budget-network
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => { process.exit(1); });"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - db_network
+      - traefik_network
+    restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=${BACKEND_URL}
-        - VITE_WS_URL=${BACKEND_WS_URL}
-    container_name: budget-frontend-prod
-    restart: unless-stopped
+    container_name: budget_frontend_container
+    expose:
+      - 80
     labels:
-      # You will configure these Traefik labels for your production domain
+      - com.centurylinklabs.watchtower.enable=true
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`yourdomain.com`) || Host(`www.yourdomain.com`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
-      # Redirect www to non-www (optional)
-      - "traefik.http.middlewares.frontend-redirect.redirectregex.regex=^https://www\\.(.+)"
-      - "traefik.http.middlewares.frontend-redirect.redirectregex.replacement=https://$${1}"
-      - "traefik.http.routers.frontend.middlewares=frontend-redirect"
+      - "traefik.http.routers.budget-frontend.entrypoints=websecure"
+      - "traefik.http.routers.budget-frontend.rule=Host(`budget.sertay.com`)"
+      - "traefik.http.routers.budget-frontend.tls.certresolver=myresolver"
+      - "traefik.docker.network=traefik_network"
+      - "traefik.http.services.budget-frontend.loadbalancer.server.port=80"
+    image: ghcr.io/sertaykabuk/budget-management/frontend:latest
+    environment:
+      VITE_API_URL: ${BACKEND_URL}
+      VITE_WS_URL: ${BACKEND_WS_URL}
     networks:
-      - budget-network
+      - traefik_network
+    restart: unless-stopped
     depends_on:
       - backend
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 networks:
-  budget-network:
-    driver: bridge
+  db_network:
+    external: true
+  traefik_network:
+    external: true
 
 volumes:
   backend-uploads:
