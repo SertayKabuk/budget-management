@@ -6,13 +6,14 @@ interface AdminRouteProps {
 }
 
 export default function AdminRoute({ children }: AdminRouteProps) {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, isAnyGroupAdmin } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isAdmin) {
+  // Allow both global admins and group admins
+  if (!isAdmin && !isAnyGroupAdmin) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">

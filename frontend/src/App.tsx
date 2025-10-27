@@ -18,7 +18,7 @@ import AuditLogsPage from './pages/AuditLogsPage';
 const queryClient = new QueryClient();
 
 function AppContent() {
-  const { user, logout, isAuthenticated, isAdmin } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin, isAnyGroupAdmin } = useAuth();
   const { t } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -71,7 +71,7 @@ function AppContent() {
                   >
                     📜 {t.nav.auditLogs}
                   </Link>
-                  {isAdmin && (
+                  {(isAdmin || isAnyGroupAdmin) && (
                     <Link 
                       to="/admin" 
                       className="flex items-center px-2 py-2 text-gray-600 hover:text-gray-900 text-sm"
@@ -151,7 +151,7 @@ function AppContent() {
               >
                 📜 {t.nav.auditLogs}
               </Link>
-              {isAdmin && (
+              {(isAdmin || isAnyGroupAdmin) && (
                 <Link
                   to="/admin"
                   className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"

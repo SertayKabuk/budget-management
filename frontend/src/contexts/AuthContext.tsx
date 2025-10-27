@@ -2,6 +2,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import axios from 'axios';
+import { config } from '../config/runtime';
 
 interface User {
   id: string;
@@ -18,6 +20,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isAnyGroupAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +37,35 @@ interface JWTPayload {
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isAnyGroupAdmin, setIsAnyGroupAdmin] = useState<boolean>(false);
+
+  // Check if user is admin of any group
+  const checkGroupAdminStatus = useCallback(async (userId: string, authToken: string) => {
+    try {
+      const response = await axios.get(`${config.apiUrl}/api/groups`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      const groups = response.data;
+      
+      // Check if user is admin in any group
+      for (const group of groups) {
+        const membersResponse = await axios.get(`${config.apiUrl}/api/groups/${group.id}/members`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        const members = membersResponse.data;
+        const userMember = members.find((m: { userId: string; role: string }) => m.userId === userId);
+        
+        if (userMember?.role === 'admin') {
+          setIsAnyGroupAdmin(true);
+          return;
+        }
+      }
+      setIsAnyGroupAdmin(false);
+    } catch (error) {
+      console.error('Error checking group admin status:', error);
+      setIsAnyGroupAdmin(false);
+    }
+  }, []);
 
   useEffect(() => {
     // Check for existing token on mount
@@ -52,6 +84,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             picture: decoded.picture,
             role: decoded.role,
           });
+          
+          // Check if user is admin of any group (unless they're already global admin)
+          if (decoded.role !== 'admin') {
+            checkGroupAdminStatus(decoded.id, storedToken);
+          } else {
+            setIsAnyGroupAdmin(false); // Global admins don't need group admin flag
+          }
         } else {
           // Token expired
           localStorage.removeItem('auth_token');
@@ -61,7 +100,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.removeItem('auth_token');
       }
     }
-  }, []);
+  }, [checkGroupAdminStatus]);
 
   const login = useCallback((newToken: string) => {
     try {
@@ -75,15 +114,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         picture: decoded.picture,
         role: decoded.role,
       });
+      
+      // Check if user is admin of any group (unless they're already global admin)
+      if (decoded.role !== 'admin') {
+        checkGroupAdminStatus(decoded.id, newToken);
+      } else {
+        setIsAnyGroupAdmin(false); // Global admins don't need group admin flag
+      }
     } catch (error) {
       console.error('Invalid token:', error);
     }
-  }, []);
+  }, [checkGroupAdminStatus]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('auth_token');
     setToken(null);
     setUser(null);
+    setIsAnyGroupAdmin(false);
   }, []);
 
   return (
@@ -95,6 +142,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
         isAuthenticated: !!user && !!token,
         isAdmin: user?.role === 'admin',
+        isAnyGroupAdmin,
       }}
     >
       {children}
