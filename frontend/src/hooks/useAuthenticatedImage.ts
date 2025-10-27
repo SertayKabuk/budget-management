@@ -37,7 +37,7 @@ export function useAuthenticatedImage(imageUrl: string | null | undefined) {
         URL.revokeObjectURL(blobUrl);
       }
     };
-  }, [imageUrl]);
+  }, [imageUrl, blobUrl]);
 
   return { blobUrl, loading, error };
 }

@@ -27,7 +27,7 @@ export default function UserRoleManagementPage() {
       setMessage({ type: 'success', text: t.userRoles.successMessage });
       setTimeout(() => setMessage(null), 3000);
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { error?: string } } }) => {
       const errorMsg = error.response?.data?.error || t.userRoles.errorMessage;
       setMessage({ type: 'error', text: errorMsg });
       setTimeout(() => setMessage(null), 5000);

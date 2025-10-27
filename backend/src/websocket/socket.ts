@@ -273,6 +273,29 @@ async function executeQueryDatabase(
         };
       });
 
+      // Adjust balances based on completed payments
+      const completedPayments = await prisma.payment.findMany({
+        where: {
+          groupId,
+          status: 'COMPLETED',
+          ...(startDate && { createdAt: { gte: startDate, ...(endDate && { lte: endDate }) } }),
+        },
+      });
+
+      completedPayments.forEach(payment => {
+        // Payment sender has paid, so their debt decreases (balance increases)
+        const fromUser = balances.find(b => b.userId === payment.fromUserId);
+        if (fromUser) {
+          fromUser.balance += payment.amount;
+        }
+
+        // Payment receiver has been paid, so what they're owed decreases (balance decreases)
+        const toUser = balances.find(b => b.userId === payment.toUserId);
+        if (toUser) {
+          toUser.balance -= payment.amount;
+        }
+      });
+
       // Calculate who owes whom
       const creditors = balances.filter(b => b.balance > 0).sort((a, b) => b.balance - a.balance);
       const debtors = balances.filter(b => b.balance < 0).sort((a, b) => a.balance - b.balance);

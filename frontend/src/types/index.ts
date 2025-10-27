@@ -9,8 +9,8 @@ export interface Group {
   id: string;
   name: string;
   description?: string;
-  members?: any[];
-  expenses?: any[];
+  members?: GroupMember[];
+  expenses?: Expense[];
 }
 
 export interface Expense {
@@ -31,8 +31,8 @@ export interface AuditLog {
   action: string;
   userId?: string;
   userName?: string;
-  oldValues?: any;
-  newValues?: any;
+  oldValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
   timestamp: string;
   ipAddress?: string;
   userAgent?: string;

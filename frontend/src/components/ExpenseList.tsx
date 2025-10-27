@@ -50,7 +50,7 @@ export default function ExpenseList({ groupId }: Props) {
         URL.revokeObjectURL(selectedImageBlob);
       }
     };
-  }, [selectedImage]);
+  }, [selectedImage, selectedImageBlob]);
 
   // Filter states
   const [presetFilter, setPresetFilter] = useState<PresetFilter>('current-month');

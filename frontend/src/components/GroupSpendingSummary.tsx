@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, useMemo } from 'react';
-import { expenseApi } from '../services/api';
+import { expenseApi, groupApi, paymentApi } from '../services/api';
 import { getSocket } from '../services/socket';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency } from '../utils/currency';
-import type { Expense } from '../types';
+import type { Expense, Payment } from '../types';
 import AuthenticatedImage from './AuthenticatedImage';
 
 interface GroupSpendingSummaryProps {
@@ -49,6 +49,26 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
     queryKey: ['expenses', groupId],
     queryFn: async () => {
       const response = await expenseApi.getAll(groupId);
+      return response.data;
+    },
+    enabled: !!groupId,
+  });
+
+  // Fetch all group members for fair share calculation
+  const { data: groupMembers } = useQuery({
+    queryKey: ['groupMembers', groupId],
+    queryFn: async () => {
+      const response = await groupApi.getMembers(groupId);
+      return response.data;
+    },
+    enabled: !!groupId,
+  });
+
+  // Fetch payments to adjust debt calculations
+  const { data: payments } = useQuery({
+    queryKey: ['payments', groupId],
+    queryFn: async () => {
+      const response = await paymentApi.getAll(groupId);
       return response.data;
     },
     enabled: !!groupId,
@@ -159,20 +179,24 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
 
   // Calculate debt settlements - MUST be before early returns
   const debtSettlements = useMemo(() => {
-    if (!expenses || expenses.length === 0) return [];
+    if (!expenses || expenses.length === 0 || !groupMembers || groupMembers.length === 0) return [];
 
-    // Get unique users who made expenses
+    // Get all group members and their spending
     const usersMap = new Map<string, { name: string; spent: number }>();
     
+    // Initialize all group members with 0 spending
+    groupMembers.forEach((member) => {
+      if (member.user) {
+        usersMap.set(member.user.id, { name: member.user.name, spent: 0 });
+      }
+    });
+
+    // Add actual expenses to the map
     expenses.forEach((expense: Expense) => {
       const userId = expense.user.id;
-      const userName = expense.user.name;
-      
-      if (!usersMap.has(userId)) {
-        usersMap.set(userId, { name: userName, spent: 0 });
+      if (usersMap.has(userId)) {
+        usersMap.get(userId)!.spent += expense.amount;
       }
-      
-      usersMap.get(userId)!.spent += expense.amount;
     });
 
     const users = Array.from(usersMap.entries()).map(([id, data]) => ({
@@ -183,7 +207,7 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
 
     if (users.length === 0) return [];
 
-    // Calculate fair share
+    // Calculate fair share based on ALL group members
     const totalSpent = users.reduce((sum, u) => sum + u.spent, 0);
     const fairShare = totalSpent / users.length;
 
@@ -193,6 +217,25 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
       userName: u.userName,
       balance: u.spent - fairShare
     }));
+
+    // Adjust balances based on completed payments
+    if (payments && payments.length > 0) {
+      payments.forEach((payment: Payment) => {
+        if (payment.status === 'COMPLETED') {
+          // Payment sender has paid, so their debt decreases (balance increases)
+          const fromUser = balances.find(b => b.userId === payment.fromUserId);
+          if (fromUser) {
+            fromUser.balance += payment.amount;
+          }
+          
+          // Payment receiver has been paid, so what they're owed decreases (balance decreases)
+          const toUser = balances.find(b => b.userId === payment.toUserId);
+          if (toUser) {
+            toUser.balance -= payment.amount;
+          }
+        }
+      });
+    }
 
     // Separate creditors and debtors
     const creditors = balances.filter(b => b.balance > 0.01).sort((a, b) => b.balance - a.balance);
@@ -229,7 +272,7 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
     }
 
     return settlements;
-  }, [expenses]);
+  }, [expenses, groupMembers, payments]);
 
   // Calculate user spending data - MUST be before early returns
   const { totalSpending, userSpendings, userExpensesMap } = useMemo(() => {

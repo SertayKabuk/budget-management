@@ -12,6 +12,13 @@ interface Message {
   isStreaming?: boolean; // To indicate if message is being streamed
 }
 
+interface ExpenseCreatedData {
+  expense: {
+    amount: number;
+    description: string;
+  };
+}
+
 interface Props {
   groupId: string;
   userId: string;
@@ -95,7 +102,7 @@ export default function MultimodalChatInterface({ groupId, userId, userName }: P
       }
     });
 
-    socket.on('expense-created', (data: any) => {
+    socket.on('expense-created', (data: ExpenseCreatedData) => {
       setMessages((prev) => [
         ...prev,
         {
@@ -125,7 +132,7 @@ export default function MultimodalChatInterface({ groupId, userId, userName }: P
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [groupId]);
+  }, [groupId, stream, t.chat?.error, t.chat?.expenseCreated]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

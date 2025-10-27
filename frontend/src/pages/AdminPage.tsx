@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { groupApi, userApi } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
+import type { Group, User } from '../types';
 
 export default function AdminPage() {
   const { t } = useTranslation();
@@ -57,13 +58,13 @@ export default function AdminPage() {
         <div className="bg-white rounded-lg shadow p-3 sm:p-6">
           <p className="text-gray-600 text-xs sm:text-sm">{t.admin.stats.activeMembers}</p>
           <p className="text-2xl sm:text-3xl font-bold text-purple-600">
-            {groups?.reduce((acc, g: any) => acc + (g.members?.length || 0), 0) || 0}
+            {groups?.reduce((acc, g: Group & { members?: unknown[] }) => acc + (g.members?.length || 0), 0) || 0}
           </p>
         </div>
         <div className="bg-white rounded-lg shadow p-3 sm:p-6">
           <p className="text-gray-600 text-xs sm:text-sm">{t.admin.stats.totalExpenses}</p>
           <p className="text-2xl sm:text-3xl font-bold text-orange-600">
-            {groups?.reduce((acc, g: any) => acc + (g._count?.expenses || 0), 0) || 0}
+            {groups?.reduce((acc, g: Group & { _count?: { expenses?: number } }) => acc + (g._count?.expenses || 0), 0) || 0}
           </p>
         </div>
       </div>
@@ -112,7 +113,7 @@ export default function AdminPage() {
           )}
 
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {groups?.map((group: any) => (
+            {groups?.map((group: Group & { members?: unknown[]; _count?: { expenses?: number } }) => (
               <div key={group.id} className="relative p-3 sm:p-4 border rounded hover:bg-gray-50">
                 <h3 className="font-medium text-sm sm:text-base pr-16">{group.name}</h3>
                 {group.description && (
@@ -156,7 +157,7 @@ export default function AdminPage() {
           </div>
 
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {users?.map((user: any) => (
+            {users?.map((user: User & { _count?: { expenses?: number } }) => (
               <div key={user.id} className="p-3 sm:p-4 border rounded hover:bg-gray-50">
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0">

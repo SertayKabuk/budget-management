@@ -1,8 +1,21 @@
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency } from '../utils/currency';
 
+interface UserSpending {
+  user: {
+    id: string;
+    name: string;
+  };
+  total: number;
+  count: number;
+}
+
 interface Props {
-  summary: any;
+  summary: {
+    totalSpending?: number;
+    expenseCount?: number;
+    spendingByUser?: UserSpending[];
+  };
 }
 
 export default function GroupSummary({ summary }: Props) {
@@ -34,7 +47,7 @@ export default function GroupSummary({ summary }: Props) {
       <div>
         <h3 className="font-semibold mb-3 text-sm sm:text-base">{t.summary.spendingByMember}</h3>
         <div className="space-y-2 sm:space-y-3">
-          {summary.spendingByUser?.map((userSpending: any) => (
+          {summary.spendingByUser?.map((userSpending: UserSpending) => (
             <div key={userSpending.user.id} className="border rounded-lg p-3 sm:p-4">
               <div className="flex justify-between items-center mb-2">
                 <span className="font-medium text-sm sm:text-base truncate pr-2">{userSpending.user.name}</span>
@@ -49,7 +62,7 @@ export default function GroupSummary({ summary }: Props) {
                 <div
                   className="bg-blue-500 h-2 rounded-full"
                   style={{
-                    width: `${(userSpending.total / summary.totalSpending) * 100}%`,
+                    width: `${(userSpending.total / (summary.totalSpending || 1)) * 100}%`,
                   }}
                 />
               </div>

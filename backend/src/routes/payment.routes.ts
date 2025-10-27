@@ -194,23 +194,15 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/payments/:id - Update payment status
+// PUT /api/payments/:id - Update payment (status and/or full edit)
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { status, description } = req.body;
+    const { status, description, fromUserId, toUserId, amount } = req.body;
     const userId = req.jwtUser?.id;
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
-    }
-
-    if (!status) {
-      return res.status(400).json({ error: 'Status is required' });
-    }
-
-    if (!Object.values(PaymentStatus).includes(status)) {
-      return res.status(400).json({ error: 'Invalid status value' });
     }
 
     // Get the existing payment
@@ -234,9 +226,51 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
     }
 
+    // Validate status if provided
+    if (status && !Object.values(PaymentStatus).includes(status)) {
+      return res.status(400).json({ error: 'Invalid status value' });
+    }
+
+    // Validate amount if provided
+    if (amount !== undefined && amount <= 0) {
+      return res.status(400).json({ error: 'Amount must be greater than 0' });
+    }
+
+    // Validate users are different if both are provided
+    if (fromUserId && toUserId && fromUserId === toUserId) {
+      return res.status(400).json({ error: 'fromUserId and toUserId must be different' });
+    }
+
+    // Validate description length if provided
+    if (description && description.length > 500) {
+      return res.status(400).json({ error: 'Description must be less than 500 characters' });
+    }
+
+    // If updating users, verify they are group members
+    if (fromUserId) {
+      const fromUserMembership = await prisma.groupMember.findFirst({
+        where: { groupId: existingPayment.groupId, userId: fromUserId }
+      });
+      if (!fromUserMembership) {
+        return res.status(400).json({ error: 'fromUser is not a member of this group' });
+      }
+    }
+
+    if (toUserId) {
+      const toUserMembership = await prisma.groupMember.findFirst({
+        where: { groupId: existingPayment.groupId, userId: toUserId }
+      });
+      if (!toUserMembership) {
+        return res.status(400).json({ error: 'toUser is not a member of this group' });
+      }
+    }
+
     const updateData: any = {
-      status,
-      ...(description !== undefined && { description })
+      ...(status !== undefined && { status }),
+      ...(description !== undefined && { description }),
+      ...(fromUserId !== undefined && { fromUserId }),
+      ...(toUserId !== undefined && { toUserId }),
+      ...(amount !== undefined && { amount: parseFloat(amount) })
     };
 
     // Set completedAt when status changes to COMPLETED

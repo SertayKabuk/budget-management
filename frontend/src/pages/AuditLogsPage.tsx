@@ -21,12 +21,14 @@ const AuditLogsPage: React.FC = () => {
 
   useEffect(() => {
     fetchGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (groups.length > 0 || isGlobalAdmin) {
       fetchAuditLogs();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGroup, selectedAction, selectedEntityType, groups, isGlobalAdmin]);
 
   const fetchGroups = async () => {
@@ -66,7 +68,7 @@ const AuditLogsPage: React.FC = () => {
     setError(null);
 
     try {
-      const params: any = {
+      const params: Record<string, string | number> = {
         limit: 200,
       };
 
@@ -91,7 +93,7 @@ const AuditLogsPage: React.FC = () => {
             }
             if (log.entityType === 'Expense' || log.entityType === 'GroupMember') {
               // Check if the expense/member belongs to a group the user is admin of
-              const groupId = log.newValues?.groupId || log.oldValues?.groupId;
+              const groupId = (log.newValues?.groupId || log.oldValues?.groupId) as string | undefined;
               return groupId && userGroupMemberships.includes(groupId);
             }
             return false;
@@ -155,7 +157,7 @@ const AuditLogsPage: React.FC = () => {
     return t.auditLogs.entityTypes[entityKey] || entityType;
   };
 
-  const formatValue = (value: any): string => {
+  const formatValue = (value: unknown): string => {
     if (value === null || value === undefined) return 'null';
     if (typeof value === 'object') return JSON.stringify(value, null, 2);
     return String(value);
@@ -164,9 +166,9 @@ const AuditLogsPage: React.FC = () => {
   const renderChanges = (log: AuditLog) => {
     if (!log.oldValues || !log.newValues) return null;
 
-    const changes: Array<{ field: string; oldValue: any; newValue: any }> = [];
-    const oldObj = log.oldValues as any;
-    const newObj = log.newValues as any;
+    const changes: Array<{ field: string; oldValue: unknown; newValue: unknown }> = [];
+    const oldObj = log.oldValues as Record<string, unknown>;
+    const newObj = log.newValues as Record<string, unknown>;
 
     Object.keys(newObj).forEach(key => {
       if (JSON.stringify(oldObj[key]) !== JSON.stringify(newObj[key])) {

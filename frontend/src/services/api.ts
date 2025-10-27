@@ -129,6 +129,13 @@ export const paymentApi = {
     amount: number;
     description?: string;
   }) => api.post<Payment>('/payments', data),
+  update: (id: string, data: {
+    fromUserId?: string;
+    toUserId?: string;
+    amount?: number;
+    description?: string;
+    status?: PaymentStatus;
+  }) => api.put<Payment>(`/payments/${id}`, data),
   updateStatus: (id: string, status: PaymentStatus, description?: string) =>
     api.put<Payment>(`/payments/${id}`, { status, description }),
   delete: (id: string) => api.delete(`/payments/${id}`),

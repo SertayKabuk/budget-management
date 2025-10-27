@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
-import { expenseApi, groupApi } from '../services/api';
-import type { Expense, Group } from '../types';
+import { expenseApi, groupApi, paymentApi, reminderApi } from '../services/api';
+import type { Expense, Group, Payment, RecurringReminder, GroupMember } from '../types';
 import * as XLSX from 'xlsx';
 import {
   LineChart,
@@ -18,6 +18,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  Area,
+  AreaChart,
 } from 'recharts';
 import { formatCurrency } from '../utils/currency';
 
@@ -40,6 +42,9 @@ export default function AnalyticsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [reminders, setReminders] = useState<RecurringReminder[]>([]);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   
@@ -63,7 +68,11 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (selectedGroupId && groups.length > 0) {
       loadExpenses();
+      loadGroupMembers();
+      loadPayments();
+      loadReminders();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGroupId, groups.length]);
 
   // Apply quick filter when it changes
@@ -97,6 +106,42 @@ export default function AnalyticsPage() {
       setExpenses([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadGroupMembers = async () => {
+    if (!selectedGroupId) return;
+    
+    try {
+      const response = await groupApi.getMembers(selectedGroupId);
+      setGroupMembers(response.data);
+    } catch (error) {
+      console.error('Failed to load group members:', error);
+      setGroupMembers([]);
+    }
+  };
+
+  const loadPayments = async () => {
+    if (!selectedGroupId) return;
+    
+    try {
+      const response = await paymentApi.getAll(selectedGroupId);
+      setPayments(response.data);
+    } catch (error) {
+      console.error('Failed to load payments:', error);
+      setPayments([]);
+    }
+  };
+
+  const loadReminders = async () => {
+    if (!selectedGroupId) return;
+    
+    try {
+      const response = await reminderApi.getAll(selectedGroupId);
+      setReminders(response.data);
+    } catch (error) {
+      console.error('Failed to load reminders:', error);
+      setReminders([]);
     }
   };
 
@@ -308,15 +353,23 @@ export default function AnalyticsPage() {
 
   // Debt settlement calculation
   const debtSettlements = useMemo(() => {
-    if (filteredExpenses.length === 0) return [];
+    if (filteredExpenses.length === 0 || groupMembers.length === 0) return [];
 
+    // Get all group members and their spending
     const usersMap = new Map<string, { name: string; spent: number }>();
     
-    filteredExpenses.forEach((expense) => {
-      if (!usersMap.has(expense.user.id)) {
-        usersMap.set(expense.user.id, { name: expense.user.name, spent: 0 });
+    // Initialize all group members with 0 spending
+    groupMembers.forEach((member: GroupMember) => {
+      if (member.user) {
+        usersMap.set(member.user.id, { name: member.user.name, spent: 0 });
       }
-      usersMap.get(expense.user.id)!.spent += expense.amount;
+    });
+
+    // Add actual expenses to the map
+    filteredExpenses.forEach((expense) => {
+      if (usersMap.has(expense.user.id)) {
+        usersMap.get(expense.user.id)!.spent += expense.amount;
+      }
     });
 
     const users = Array.from(usersMap.entries()).map(([id, data]) => ({
@@ -327,6 +380,7 @@ export default function AnalyticsPage() {
 
     if (users.length === 0) return [];
 
+    // Calculate fair share based on ALL group members
     const totalSpent = users.reduce((sum, u) => sum + u.spent, 0);
     const fairShare = totalSpent / users.length;
 
@@ -336,6 +390,25 @@ export default function AnalyticsPage() {
       balance: u.spent - fairShare,
       fairShare: fairShare
     }));
+
+    // Adjust balances based on completed payments
+    if (payments && payments.length > 0) {
+      payments.forEach((payment: Payment) => {
+        if (payment.status === 'COMPLETED') {
+          // Payment sender has paid, so their debt decreases (balance increases)
+          const fromUser = balances.find(b => b.userId === payment.fromUserId);
+          if (fromUser) {
+            fromUser.balance += payment.amount;
+          }
+          
+          // Payment receiver has been paid, so what they're owed decreases (balance decreases)
+          const toUser = balances.find(b => b.userId === payment.toUserId);
+          if (toUser) {
+            toUser.balance -= payment.amount;
+          }
+        }
+      });
+    }
 
     const creditors = balances.filter(b => b.balance > 0.01).sort((a, b) => b.balance - a.balance);
     const debtors = balances.filter(b => b.balance < -0.01).sort((a, b) => a.balance - b.balance);
@@ -366,7 +439,7 @@ export default function AnalyticsPage() {
     }
 
     return { settlements, balances, fairShare };
-  }, [filteredExpenses]);
+  }, [filteredExpenses, groupMembers, payments]);
 
   // Day of week analysis
   const dayOfWeekData = useMemo(() => {
@@ -407,6 +480,244 @@ export default function AnalyticsPage() {
       .slice(0, 10);
   }, [filteredExpenses]);
 
+  // Payment Analytics
+  const paymentAnalytics = useMemo(() => {
+    if (!payments || payments.length === 0) {
+      return {
+        total: 0,
+        count: 0,
+        completed: 0,
+        pending: 0,
+        cancelled: 0,
+        average: 0,
+        statusData: [],
+        timelineData: [],
+        topPayers: [],
+        topReceivers: [],
+      };
+    }
+
+    // Filter payments by date range if applicable
+    const filteredPayments = payments.filter(payment => {
+      const paymentDate = new Date(payment.createdAt);
+      if (filters.startDate && paymentDate < new Date(filters.startDate)) return false;
+      if (filters.endDate && paymentDate > new Date(filters.endDate + 'T23:59:59')) return false;
+      return true;
+    });
+
+    const total = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
+    const count = filteredPayments.length;
+    const completed = filteredPayments.filter(p => p.status === 'COMPLETED').length;
+    const pending = filteredPayments.filter(p => p.status === 'PENDING').length;
+    const cancelled = filteredPayments.filter(p => p.status === 'CANCELLED').length;
+    const average = count > 0 ? total / count : 0;
+
+    // Status distribution
+    const statusData = [
+      { name: t.analytics.paymentAnalytics.paymentStatus.COMPLETED, value: completed, status: 'COMPLETED' },
+      { name: t.analytics.paymentAnalytics.paymentStatus.PENDING, value: pending, status: 'PENDING' },
+      { name: t.analytics.paymentAnalytics.paymentStatus.CANCELLED, value: cancelled, status: 'CANCELLED' },
+    ].filter(s => s.value > 0);
+
+    // Payment timeline
+    const dailyPayments = filteredPayments.reduce((acc, payment) => {
+      const date = new Date(payment.createdAt).toLocaleDateString('tr-TR');
+      if (!acc[date]) {
+        acc[date] = { date, amount: 0, count: 0 };
+      }
+      acc[date].amount += payment.amount;
+      acc[date].count += 1;
+      return acc;
+    }, {} as Record<string, { date: string; amount: number; count: number }>);
+
+    const timelineData = Object.values(dailyPayments)
+      .sort((a, b) => new Date(a.date.split('.').reverse().join('-')).getTime() - 
+                      new Date(b.date.split('.').reverse().join('-')).getTime());
+
+    // Top payers and receivers
+    const payerTotals = filteredPayments.reduce((acc, payment) => {
+      if (payment.fromUser) {
+        const name = payment.fromUser.name;
+        acc[name] = (acc[name] || 0) + payment.amount;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    const receiverTotals = filteredPayments.reduce((acc, payment) => {
+      if (payment.toUser) {
+        const name = payment.toUser.name;
+        acc[name] = (acc[name] || 0) + payment.amount;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    const topPayers = Object.entries(payerTotals)
+      .map(([name, amount]) => ({ name, amount }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+
+    const topReceivers = Object.entries(receiverTotals)
+      .map(([name, amount]) => ({ name, amount }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+
+    return {
+      total,
+      count,
+      completed,
+      pending,
+      cancelled,
+      average,
+      statusData,
+      timelineData,
+      topPayers,
+      topReceivers,
+    };
+  }, [payments, filters.startDate, filters.endDate, t]);
+
+  // Reminder Analytics
+  const reminderAnalytics = useMemo(() => {
+    if (!reminders || reminders.length === 0) {
+      return {
+        activeCount: 0,
+        overdueCount: 0,
+        totalProjected30Days: 0,
+        totalProjected60Days: 0,
+        totalProjected90Days: 0,
+        frequencyData: [],
+        upcomingReminders: [],
+      };
+    }
+
+    const now = new Date();
+    const active = reminders.filter(r => r.isActive);
+    const activeCount = active.length;
+    
+    const overdueCount = active.filter(r => new Date(r.nextDueDate) < now).length;
+
+    // Calculate projected spending for next 30, 60, 90 days
+    const calculate30DayProjection = () => {
+      const endDate = new Date(now);
+      endDate.setDate(endDate.getDate() + 30);
+      let total = 0;
+
+      active.forEach(reminder => {
+        const nextDue = new Date(reminder.nextDueDate);
+        while (nextDue <= endDate) {
+          total += reminder.amount;
+          // Calculate next occurrence based on frequency
+          switch (reminder.frequency) {
+            case 'WEEKLY':
+              nextDue.setDate(nextDue.getDate() + 7);
+              break;
+            case 'MONTHLY':
+              nextDue.setMonth(nextDue.getMonth() + 1);
+              break;
+            case 'EVERY_6_MONTHS':
+              nextDue.setMonth(nextDue.getMonth() + 6);
+              break;
+            case 'YEARLY':
+              nextDue.setFullYear(nextDue.getFullYear() + 1);
+              break;
+          }
+        }
+      });
+      return total;
+    };
+
+    const calculate60DayProjection = () => {
+      const endDate = new Date(now);
+      endDate.setDate(endDate.getDate() + 60);
+      let total = 0;
+
+      active.forEach(reminder => {
+        const nextDue = new Date(reminder.nextDueDate);
+        while (nextDue <= endDate) {
+          total += reminder.amount;
+          switch (reminder.frequency) {
+            case 'WEEKLY':
+              nextDue.setDate(nextDue.getDate() + 7);
+              break;
+            case 'MONTHLY':
+              nextDue.setMonth(nextDue.getMonth() + 1);
+              break;
+            case 'EVERY_6_MONTHS':
+              nextDue.setMonth(nextDue.getMonth() + 6);
+              break;
+            case 'YEARLY':
+              nextDue.setFullYear(nextDue.getFullYear() + 1);
+              break;
+          }
+        }
+      });
+      return total;
+    };
+
+    const calculate90DayProjection = () => {
+      const endDate = new Date(now);
+      endDate.setDate(endDate.getDate() + 90);
+      let total = 0;
+
+      active.forEach(reminder => {
+        const nextDue = new Date(reminder.nextDueDate);
+        while (nextDue <= endDate) {
+          total += reminder.amount;
+          switch (reminder.frequency) {
+            case 'WEEKLY':
+              nextDue.setDate(nextDue.getDate() + 7);
+              break;
+            case 'MONTHLY':
+              nextDue.setMonth(nextDue.getMonth() + 1);
+              break;
+            case 'EVERY_6_MONTHS':
+              nextDue.setMonth(nextDue.getMonth() + 6);
+              break;
+            case 'YEARLY':
+              nextDue.setFullYear(nextDue.getFullYear() + 1);
+              break;
+          }
+        }
+      });
+      return total;
+    };
+
+    const totalProjected30Days = calculate30DayProjection();
+    const totalProjected60Days = calculate60DayProjection();
+    const totalProjected90Days = calculate90DayProjection();
+
+    // Frequency distribution
+    const frequencyCounts = active.reduce((acc, r) => {
+      const freq = r.frequency;
+      acc[freq] = (acc[freq] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const frequencyData = Object.entries(frequencyCounts).map(([frequency, count]) => ({
+      name: t.reminders.frequency[frequency as keyof typeof t.reminders.frequency] || frequency,
+      value: count,
+    }));
+
+    // Upcoming reminders (next 30 days)
+    const upcomingReminders = active
+      .map(r => {
+        const nextDue = new Date(r.nextDueDate);
+        const daysUntil = Math.ceil((nextDue.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return { ...r, daysUntil };
+      })
+      .filter(r => r.daysUntil <= 30)
+      .sort((a, b) => a.daysUntil - b.daysUntil);
+
+    return {
+      activeCount,
+      overdueCount,
+      totalProjected30Days,
+      totalProjected60Days,
+      totalProjected90Days,
+      frequencyData,
+      upcomingReminders,
+    };
+  }, [reminders, t]);
+
   // Get unique categories and members for filters
   const uniqueCategories = useMemo(() => {
     return Array.from(new Set(expenses.map(e => e.category || t.spending.uncategorized)));
@@ -421,7 +732,10 @@ export default function AnalyticsPage() {
   const handleExportExcel = async () => {
     setExporting(true);
     try {
-      // Prepare data for export
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+
+      // === EXPENSES SHEET ===
       const exportData = filteredExpenses.map(expense => ({
         [t.analytics.export.headers.date]: new Date(expense.date).toLocaleDateString('tr-TR'),
         [t.analytics.export.headers.description]: expense.description,
@@ -430,7 +744,7 @@ export default function AnalyticsPage() {
         [t.analytics.export.headers.amount]: expense.amount,
       }));
 
-      // Add summary row
+      // Add summary row for expenses
       exportData.push({
         [t.analytics.export.headers.date]: '',
         [t.analytics.export.headers.description]: '',
@@ -439,20 +753,71 @@ export default function AnalyticsPage() {
         [t.analytics.export.headers.amount]: summaryStats.total,
       });
 
-      // Create workbook
       const ws = XLSX.utils.json_to_sheet(exportData);
-      const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, t.analytics.export.summarySheet.expenseSheet);
 
-      // Add summary sheet
+      // === PAYMENTS SHEET ===
+      if (payments && payments.length > 0) {
+        const paymentExportData = payments.map(payment => ({
+          [t.analytics.export.headers.date]: new Date(payment.createdAt).toLocaleDateString('tr-TR'),
+          [t.analytics.export.headers.from]: payment.fromUser?.name || 'N/A',
+          [t.analytics.export.headers.to]: payment.toUser?.name || 'N/A',
+          [t.analytics.export.headers.amount]: payment.amount,
+          [t.analytics.export.headers.status]: t.analytics.paymentAnalytics.paymentStatus[payment.status] || payment.status,
+          [t.analytics.export.headers.description]: payment.description || '',
+          [t.analytics.export.headers.completedAt]: payment.completedAt 
+            ? new Date(payment.completedAt).toLocaleDateString('tr-TR') 
+            : '',
+        }));
+
+        // Add payment summary
+        paymentExportData.push({
+          [t.analytics.export.headers.date]: '',
+          [t.analytics.export.headers.from]: '',
+          [t.analytics.export.headers.to]: '',
+          [t.analytics.export.headers.amount]: paymentAnalytics.total,
+          [t.analytics.export.headers.status]: t.analytics.export.headers.total,
+          [t.analytics.export.headers.description]: '',
+          [t.analytics.export.headers.completedAt]: '',
+        });
+
+        const ws2 = XLSX.utils.json_to_sheet(paymentExportData);
+        XLSX.utils.book_append_sheet(wb, ws2, t.analytics.export.summarySheet.paymentSheet);
+      }
+
+      // === REMINDERS SHEET ===
+      if (reminders && reminders.length > 0) {
+        const reminderExportData = reminders.map(reminder => ({
+          [t.analytics.export.headers.title]: reminder.title,
+          [t.analytics.export.headers.description]: reminder.description || '',
+          [t.analytics.export.headers.amount]: reminder.amount,
+          [t.analytics.export.headers.frequency]: t.reminders.frequency[reminder.frequency] || reminder.frequency,
+          [t.analytics.export.headers.nextDue]: new Date(reminder.nextDueDate).toLocaleDateString('tr-TR'),
+          [t.analytics.export.headers.isActive]: reminder.isActive ? t.analytics.reminderAnalytics.active : t.analytics.reminderAnalytics.inactive,
+        }));
+
+        const ws3 = XLSX.utils.json_to_sheet(reminderExportData);
+        XLSX.utils.book_append_sheet(wb, ws3, t.analytics.export.summarySheet.reminderSheet);
+      }
+
+      // === SUMMARY SHEET ===
       const summaryData = [
         { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.totalSpending, [t.analytics.export.summarySheet.value]: formatCurrency(summaryStats.total) },
         { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.averageSpending, [t.analytics.export.summarySheet.value]: formatCurrency(summaryStats.average) },
         { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.totalTransactions, [t.analytics.export.summarySheet.value]: summaryStats.count },
         { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.topCategory, [t.analytics.export.summarySheet.value]: summaryStats.topCategory },
+        { [t.analytics.export.summarySheet.metric]: '', [t.analytics.export.summarySheet.value]: '' },
+        { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.totalPayments, [t.analytics.export.summarySheet.value]: formatCurrency(paymentAnalytics.total) },
+        { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.paymentCount, [t.analytics.export.summarySheet.value]: paymentAnalytics.count },
+        { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.completedPayments, [t.analytics.export.summarySheet.value]: paymentAnalytics.completed },
+        { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.pendingPayments, [t.analytics.export.summarySheet.value]: paymentAnalytics.pending },
+        { [t.analytics.export.summarySheet.metric]: '', [t.analytics.export.summarySheet.value]: '' },
+        { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.activeReminders, [t.analytics.export.summarySheet.value]: reminderAnalytics.activeCount },
+        { [t.analytics.export.summarySheet.metric]: t.analytics.export.summarySheet.totalProjected, [t.analytics.export.summarySheet.value]: formatCurrency(reminderAnalytics.totalProjected30Days) },
       ];
-      const ws2 = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, ws2, t.analytics.export.summarySheet.name);
+
+      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, wsSummary, t.analytics.export.summarySheet.name);
 
       // Generate filename with date
       const filename = `${t.analytics.export.filename}-${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -757,8 +1122,8 @@ export default function AnalyticsPage() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={(entry: any) => 
-                          `${entry.name}: ${(entry.percent * 100).toFixed(0)}%`
+                        label={(entry: Record<string, unknown>) => 
+                          `${entry.name}: ${((entry.percent as number) * 100).toFixed(0)}%`
                         }
                         outerRadius={80}
                         fill="#8884d8"
@@ -790,6 +1155,251 @@ export default function AnalyticsPage() {
                   </ResponsiveContainer>
                 </div>
               </div>
+
+              {/* Payment Analytics Section */}
+              {payments && payments.length > 0 && (
+                <>
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg shadow p-6 mb-6 border-l-4 border-green-500">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <span>💰</span> {t.analytics.paymentAnalytics.title}
+                    </h2>
+                    
+                    {/* Payment Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-white rounded-lg shadow p-4">
+                        <p className="text-sm text-gray-600">{t.analytics.paymentAnalytics.totalPayments}</p>
+                        <p className="text-xl font-bold text-green-600 mt-2">
+                          {formatCurrency(paymentAnalytics.total)}
+                        </p>
+                      </div>
+                      <div className="bg-white rounded-lg shadow p-4">
+                        <p className="text-sm text-gray-600">{t.analytics.paymentAnalytics.paymentCount}</p>
+                        <p className="text-xl font-bold text-gray-900 mt-2">{paymentAnalytics.count}</p>
+                      </div>
+                      <div className="bg-white rounded-lg shadow p-4">
+                        <p className="text-sm text-gray-600">{t.analytics.paymentAnalytics.completedPayments}</p>
+                        <p className="text-xl font-bold text-green-600 mt-2">{paymentAnalytics.completed}</p>
+                      </div>
+                      <div className="bg-white rounded-lg shadow p-4">
+                        <p className="text-sm text-gray-600">{t.analytics.paymentAnalytics.pendingPayments}</p>
+                        <p className="text-xl font-bold text-orange-600 mt-2">{paymentAnalytics.pending}</p>
+                      </div>
+                    </div>
+
+                    {/* Payment Charts */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Payment Status Distribution */}
+                      {paymentAnalytics.statusData.length > 0 && (
+                        <div className="bg-white rounded-lg shadow p-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            {t.analytics.paymentAnalytics.statusDistribution}
+                          </h3>
+                          <ResponsiveContainer width="100%" height={250}>
+                            <PieChart>
+                              <Pie
+                                data={paymentAnalytics.statusData}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={(entry: Record<string, unknown>) => 
+                                  `${entry.name}: ${entry.value}`
+                                }
+                                outerRadius={80}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                {paymentAnalytics.statusData.map((entry, index) => (
+                                  <Cell 
+                                    key={`cell-${index}`} 
+                                    fill={entry.status === 'COMPLETED' ? '#10b981' : entry.status === 'PENDING' ? '#f59e0b' : '#ef4444'} 
+                                  />
+                                ))}
+                              </Pie>
+                              <Tooltip />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+
+                      {/* Payment Timeline */}
+                      {paymentAnalytics.timelineData.length > 0 && (
+                        <div className="bg-white rounded-lg shadow p-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            {t.analytics.paymentAnalytics.paymentTimeline}
+                          </h3>
+                          <ResponsiveContainer width="100%" height={250}>
+                            <AreaChart data={paymentAnalytics.timelineData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="date" />
+                              <YAxis />
+                              <Tooltip 
+                                formatter={(value: number | string, name: string) => [
+                                  name === 'amount' ? formatCurrency(Number(value)) : value,
+                                  name === 'amount' ? t.analytics.charts.amount : name
+                                ]} 
+                              />
+                              <Legend />
+                              <Area 
+                                type="monotone" 
+                                dataKey="amount" 
+                                stroke="#10b981" 
+                                fill="#10b981" 
+                                fillOpacity={0.3}
+                                name={t.analytics.charts.amount}
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+
+                      {/* Top Payers */}
+                      {paymentAnalytics.topPayers.length > 0 && (
+                        <div className="bg-white rounded-lg shadow p-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            {t.analytics.paymentAnalytics.topPayers}
+                          </h3>
+                          <ResponsiveContainer width="100%" height={250}>
+                            <BarChart data={paymentAnalytics.topPayers} layout="vertical">
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis type="number" />
+                              <YAxis dataKey="name" type="category" width={100} />
+                              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                              <Bar dataKey="amount" fill="#10b981" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+
+                      {/* Top Receivers */}
+                      {paymentAnalytics.topReceivers.length > 0 && (
+                        <div className="bg-white rounded-lg shadow p-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            {t.analytics.paymentAnalytics.topReceivers}
+                          </h3>
+                          <ResponsiveContainer width="100%" height={250}>
+                            <BarChart data={paymentAnalytics.topReceivers} layout="vertical">
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis type="number" />
+                              <YAxis dataKey="name" type="category" width={100} />
+                              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                              <Bar dataKey="amount" fill="#3b82f6" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Reminder Analytics Section */}
+              {reminders && reminders.length > 0 && (
+                <>
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg shadow p-6 mb-6 border-l-4 border-purple-500">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <span>🔔</span> {t.analytics.reminderAnalytics.title}
+                    </h2>
+                    
+                    {/* Reminder Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-white rounded-lg shadow p-4">
+                        <p className="text-sm text-gray-600">{t.analytics.reminderAnalytics.activeReminders}</p>
+                        <p className="text-xl font-bold text-purple-600 mt-2">{reminderAnalytics.activeCount}</p>
+                      </div>
+                      <div className="bg-white rounded-lg shadow p-4">
+                        <p className="text-sm text-gray-600">{t.analytics.reminderAnalytics.next30Days}</p>
+                        <p className="text-xl font-bold text-indigo-600 mt-2">
+                          {formatCurrency(reminderAnalytics.totalProjected30Days)}
+                        </p>
+                      </div>
+                      <div className="bg-white rounded-lg shadow p-4">
+                        <p className="text-sm text-gray-600">{t.analytics.reminderAnalytics.next60Days}</p>
+                        <p className="text-xl font-bold text-indigo-600 mt-2">
+                          {formatCurrency(reminderAnalytics.totalProjected60Days)}
+                        </p>
+                      </div>
+                      <div className="bg-white rounded-lg shadow p-4">
+                        <p className="text-sm text-gray-600">{t.analytics.reminderAnalytics.next90Days}</p>
+                        <p className="text-xl font-bold text-indigo-600 mt-2">
+                          {formatCurrency(reminderAnalytics.totalProjected90Days)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Reminder Charts and Lists */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Frequency Distribution */}
+                      {reminderAnalytics.frequencyData.length > 0 && (
+                        <div className="bg-white rounded-lg shadow p-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            {t.analytics.reminderAnalytics.remindersByFrequency}
+                          </h3>
+                          <ResponsiveContainer width="100%" height={250}>
+                            <PieChart>
+                              <Pie
+                                data={reminderAnalytics.frequencyData}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={(entry: Record<string, unknown>) => 
+                                  `${entry.name}: ${entry.value}`
+                                }
+                                outerRadius={80}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                {reminderAnalytics.frequencyData.map((_entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+
+                      {/* Upcoming Reminders List */}
+                      {reminderAnalytics.upcomingReminders.length > 0 && (
+                        <div className="bg-white rounded-lg shadow p-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            {t.analytics.reminderAnalytics.upcomingExpenses}
+                          </h3>
+                          <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                            {reminderAnalytics.upcomingReminders.slice(0, 10).map((reminder) => (
+                              <div 
+                                key={reminder.id} 
+                                className={`flex items-center justify-between p-3 rounded-lg ${
+                                  reminder.daysUntil < 0 ? 'bg-red-50 border border-red-200' :
+                                  reminder.daysUntil === 0 ? 'bg-orange-50 border border-orange-200' :
+                                  reminder.daysUntil <= 7 ? 'bg-yellow-50 border border-yellow-200' :
+                                  'bg-gray-50 border border-gray-200'
+                                }`}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium text-gray-900 truncate">
+                                    {reminder.title}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {new Date(reminder.nextDueDate).toLocaleDateString('tr-TR')} • {' '}
+                                    {reminder.daysUntil < 0 
+                                      ? `${Math.abs(reminder.daysUntil)} ${t.analytics.reminderAnalytics.overdue}` 
+                                      : reminder.daysUntil === 0 
+                                      ? t.reminders.dueToday 
+                                      : `${reminder.daysUntil} ${t.analytics.reminderAnalytics.daysUntilDue}`}
+                                  </div>
+                                </div>
+                                <div className="text-sm font-bold text-gray-900 ml-2">
+                                  {formatCurrency(reminder.amount)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Monthly Breakdown Section */}
               {monthlyBreakdown.length > 0 && (
@@ -891,7 +1501,7 @@ export default function AnalyticsPage() {
                   
                   {/* Balance Overview */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-                    {debtSettlements.balances.map((balance: any) => (
+                    {debtSettlements.balances.map((balance: { userId: string; userName: string; balance: number; fairShare: number }) => (
                       <div 
                         key={balance.userId} 
                         className={`rounded-lg p-3 ${
@@ -921,7 +1531,7 @@ export default function AnalyticsPage() {
                   {/* Settlement Transactions */}
                   <div className="space-y-2">
                     <h4 className="font-semibold text-sm text-gray-700 mb-2">{t.analytics.debtSettlement.recommendedPayments}</h4>
-                    {debtSettlements.settlements.map((settlement: any, index: number) => (
+                    {debtSettlements.settlements.map((settlement: { from: string; to: string; amount: number }, index: number) => (
                       <div key={index} className="bg-gradient-to-r from-orange-50 to-yellow-50 border-l-4 border-orange-400 rounded-lg p-4">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <div className="flex items-center gap-3">
