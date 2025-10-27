@@ -18,6 +18,11 @@ export function convertDecimalsToNumbers<T>(obj: T): T {
     return obj.toNumber() as T;
   }
 
+  // Handle Date instances - convert to ISO string
+  if (obj instanceof Date) {
+    return obj.toISOString() as T;
+  }
+
   // Handle arrays
   if (Array.isArray(obj)) {
     return obj.map(item => convertDecimalsToNumbers(item)) as T;
