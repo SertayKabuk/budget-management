@@ -22,8 +22,11 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
-  expenses     Expense[]
-  groupMembers GroupMember[]
+  expenses           Expense[]
+  groupMembers       GroupMember[]
+  paymentsFrom       Payment[] @relation("PaymentFrom")
+  paymentsTo         Payment[] @relation("PaymentTo")
+  createdReminders   RecurringReminder[]
 }
 
 model Group {
@@ -33,8 +36,10 @@ model Group {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  members  GroupMember[]
-  expenses Expense[]
+  members           GroupMember[]
+  expenses          Expense[]
+  payments          Payment[]
+  recurringReminders RecurringReminder[]
 }
 
 model GroupMember {
@@ -85,3 +90,58 @@ model AuditLog {
   @@index([timestamp])
 }
 
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  amount      Float
+  fromUserId  String
+  toUserId    String
+  groupId     String
+  status      PaymentStatus @default(PENDING)
+  description String?
+  createdAt   DateTime      @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime      @updatedAt
+  
+  fromUser User  @relation("PaymentFrom", fields: [fromUserId], references: [id])
+  toUser   User  @relation("PaymentTo", fields: [toUserId], references: [id])
+  group    Group @relation(fields: [groupId], references: [id])
+  
+  @@index([groupId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([status])
+}
+
+enum ReminderFrequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+  EVERY_6_MONTHS
+}
+
+model RecurringReminder {
+  id          String            @id @default(uuid())
+  title       String
+  description String?
+  amount      Float
+  frequency   ReminderFrequency
+  groupId     String
+  nextDueDate DateTime
+  isActive    Boolean           @default(true)
+  createdById String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  group     Group @relation(fields: [groupId], references: [id])
+  createdBy User  @relation(fields: [createdById], references: [id])
+  
+  @@index([groupId])
+  @@index([nextDueDate])
+  @@index([isActive])
+}

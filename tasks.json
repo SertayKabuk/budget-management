@@ -1,0 +1,342 @@
+{
+  "project": "Budget Management - Debt Settlement & Recurring Payments",
+  "version": "1.0",
+  "tasks": [
+    {
+      "id": 1,
+      "feature": "Debt Settlement - Database Schema",
+      "title": "Add Payment model to Prisma schema",
+      "description": "Create a new Payment model in backend/prisma/schema.prisma to track debt settlements between users. Fields: id (uuid), amount (Float), fromUserId (String), toUserId (String), groupId (String), status (enum: 'pending', 'completed', 'cancelled'), description (String?), createdAt (DateTime), completedAt (DateTime?), updatedAt (DateTime). Add relations to User and Group models. Status enum should be defined properly.",
+      "files": ["backend/prisma/schema.prisma"],
+      "dependencies": [],
+      "priority": "high"
+    },
+    {
+      "id": 2,
+      "feature": "Recurring Payments - Database Schema",
+      "title": "Add RecurringReminder model to Prisma schema",
+      "description": "Create RecurringReminder model in backend/prisma/schema.prisma for payment reminders. Fields: id (uuid), title (String), description (String?), amount (Float), frequency (enum: 'weekly', 'monthly', 'yearly', 'every_6_months'), groupId (String), nextDueDate (DateTime), isActive (Boolean @default(true)), createdById (String), createdAt (DateTime), updatedAt (DateTime). Add relations to Group and User (creator). This is NOT assigned to specific users.",
+      "files": ["backend/prisma/schema.prisma"],
+      "dependencies": [1],
+      "priority": "high"
+    },
+    {
+      "id": 3,
+      "feature": "Database Migration",
+      "title": "Run Prisma migration for new models",
+      "description": "Execute 'npm run prisma:migrate' from backend/ directory to create migration files and apply schema changes. Then run 'npm run prisma:generate' to regenerate Prisma client with new types. Verify migration files are created in backend/prisma/migrations/.",
+      "files": ["backend/prisma/migrations/"],
+      "dependencies": [2],
+      "priority": "high"
+    },
+    {
+      "id": 4,
+      "feature": "Debt Settlement - TypeScript Types",
+      "title": "Add Payment types to frontend types",
+      "description": "Add Payment and PaymentStatus types to frontend/src/types/index.ts. Payment interface should include: id, amount, fromUser (User), toUser (User), group (Group), status, description?, createdAt, completedAt?, updatedAt. PaymentStatus type: 'pending' | 'completed' | 'cancelled'. Mirror backend Prisma model structure.",
+      "files": ["frontend/src/types/index.ts"],
+      "dependencies": [1],
+      "priority": "medium"
+    },
+    {
+      "id": 5,
+      "feature": "Recurring Payments - TypeScript Types",
+      "title": "Add RecurringReminder types to frontend types",
+      "description": "Add RecurringReminder and ReminderFrequency types to frontend/src/types/index.ts. RecurringReminder interface: id, title, description?, amount, frequency, groupId, nextDueDate, isActive, createdBy (User), createdAt, updatedAt. ReminderFrequency type: 'weekly' | 'monthly' | 'yearly' | 'every_6_months'.",
+      "files": ["frontend/src/types/index.ts"],
+      "dependencies": [2],
+      "priority": "medium"
+    },
+    {
+      "id": 6,
+      "feature": "Debt Settlement - Backend Routes",
+      "title": "Create payment.routes.ts for payment CRUD operations",
+      "description": "Create backend/src/routes/payment.routes.ts with JWT-protected routes. Implement: GET /api/payments (list with groupId filter), GET /api/payments/:id, POST /api/payments (create from debt suggestion), PUT /api/payments/:id (update status), DELETE /api/payments/:id. All routes must verify group membership. Use authenticateToken middleware. Follow existing route patterns from expense.routes.ts.",
+      "files": ["backend/src/routes/payment.routes.ts"],
+      "dependencies": [3],
+      "priority": "high"
+    },
+    {
+      "id": 7,
+      "feature": "Recurring Payments - Backend Routes",
+      "title": "Create reminder.routes.ts for recurring reminder CRUD",
+      "description": "Create backend/src/routes/reminder.routes.ts with JWT-protected routes. Implement: GET /api/reminders (filter by groupId), GET /api/reminders/:id, POST /api/reminders (create), PUT /api/reminders/:id (update), DELETE /api/reminders/:id, PATCH /api/reminders/:id/toggle (activate/deactivate). Verify group membership. Use authenticateToken middleware. Include audit trail for all operations.",
+      "files": ["backend/src/routes/reminder.routes.ts"],
+      "dependencies": [3],
+      "priority": "high"
+    },
+    {
+      "id": 8,
+      "feature": "Backend Route Registration",
+      "title": "Register new routes in backend/src/index.ts",
+      "description": "Import paymentRoutes from './routes/payment.routes' and reminderRoutes from './routes/reminder.routes' in backend/src/index.ts. Add app.use('/api/payments', paymentRoutes) and app.use('/api/reminders', reminderRoutes) after existing route registrations. Follow the existing pattern.",
+      "files": ["backend/src/index.ts"],
+      "dependencies": [6, 7],
+      "priority": "high"
+    },
+    {
+      "id": 9,
+      "feature": "Debt Settlement - Frontend API Service",
+      "title": "Add payment API functions to frontend api.ts",
+      "description": "Add paymentApi object to frontend/src/services/api.ts with typed functions: getAll(groupId?: string), getById(id), create(data: {fromUserId, toUserId, groupId, amount, description?}), updateStatus(id, status: PaymentStatus), delete(id). Use existing apiClient with JWT auto-injection. Follow pattern from expenseApi and groupApi.",
+      "files": ["frontend/src/services/api.ts"],
+      "dependencies": [4, 6],
+      "priority": "high"
+    },
+    {
+      "id": 10,
+      "feature": "Recurring Payments - Frontend API Service",
+      "title": "Add reminder API functions to frontend api.ts",
+      "description": "Add reminderApi object to frontend/src/services/api.ts with functions: getAll(groupId?: string), getById(id), create(data: {title, description?, amount, frequency, groupId, nextDueDate}), update(id, data), delete(id), toggleActive(id). Follow existing API patterns with proper typing.",
+      "files": ["frontend/src/services/api.ts"],
+      "dependencies": [5, 7],
+      "priority": "high"
+    },
+    {
+      "id": 11,
+      "feature": "Debt Settlement - UI Component",
+      "title": "Create DebtSettlementManager component",
+      "description": "Create frontend/src/components/DebtSettlementManager.tsx. Display calculated debt settlements from GroupSpendingSummary logic. Add 'Create Payment' button for each settlement suggestion that calls paymentApi.create(). Show existing payments list with status badges (pending/completed/cancelled). Add status update buttons. Use TanStack Query for data fetching/mutations. Must use useTranslation for all text. NO hardcoded strings.",
+      "files": ["frontend/src/components/DebtSettlementManager.tsx"],
+      "dependencies": [9],
+      "priority": "high"
+    },
+    {
+      "id": 12,
+      "feature": "Recurring Payments - UI Component",
+      "title": "Create RecurringReminderManager component",
+      "description": "Create frontend/src/components/RecurringReminderManager.tsx. Display list of recurring reminders with cards showing title, amount, frequency, next due date, active status. Add 'Create Reminder' button with modal/form (fields: title, description, amount, frequency dropdown, start date). Edit/delete/toggle active buttons for each reminder. Show visual indicators for upcoming reminders (within 7 days). Use TanStack Query. All text via useTranslation hook.",
+      "files": ["frontend/src/components/RecurringReminderManager.tsx"],
+      "dependencies": [10],
+      "priority": "high"
+    },
+    {
+      "id": 13,
+      "feature": "Localization - Debt Settlement",
+      "title": "Add Turkish translations for debt settlement",
+      "description": "Add new translation keys to frontend/src/locales/tr.ts under 'payments' object: {title, status: {pending, completed, cancelled}, createPayment, markAsCompleted, cancel, from, to, amount, description, createdAt, completedAt, noPayments, confirmComplete, confirmCancel, createSuccess, updateSuccess, deleteSuccess, createError, updateError}. Follow existing translation structure.",
+      "files": ["frontend/src/locales/tr.ts"],
+      "dependencies": [],
+      "priority": "medium"
+    },
+    {
+      "id": 14,
+      "feature": "Localization - Recurring Reminders",
+      "title": "Add Turkish translations for recurring reminders",
+      "description": "Add 'reminders' object to frontend/src/locales/tr.ts with keys: {title, createReminder, editReminder, frequency: {weekly, monthly, yearly, every_6_months}, fields: {title, description, amount, frequency, startDate, nextDue}, active, inactive, toggleActive, upcomingReminders, dueIn, overdue, noReminders, createSuccess, updateSuccess, deleteSuccess, errors, confirmDelete}. All UI text must come from this.",
+      "files": ["frontend/src/locales/tr.ts"],
+      "dependencies": [],
+      "priority": "medium"
+    },
+    {
+      "id": 15,
+      "feature": "Integration - GroupPage",
+      "title": "Add DebtSettlementManager to GroupPage",
+      "description": "Import and render DebtSettlementManager component in frontend/src/pages/GroupPage.tsx. Add new section below GroupSpendingSummary or as a new tab/accordion. Pass groupId prop. Ensure it's visible to all group members but only shows relevant payments. Consider adding it in the existing 3-column grid layout.",
+      "files": ["frontend/src/pages/GroupPage.tsx"],
+      "dependencies": [11, 13],
+      "priority": "medium"
+    },
+    {
+      "id": 16,
+      "feature": "Integration - HomePage",
+      "title": "Add RecurringReminderManager to HomePage",
+      "description": "Import and render RecurringReminderManager in frontend/src/pages/HomePage.tsx after GroupSpendingSummary. Add conditional rendering based on selectedGroupId. Consider adding as collapsible section or separate card. Should show upcoming reminders prominently. Pass groupId and ensure proper layout on mobile (responsive design with Tailwind).",
+      "files": ["frontend/src/pages/HomePage.tsx"],
+      "dependencies": [12, 14],
+      "priority": "medium"
+    },
+    {
+      "id": 17,
+      "feature": "Real-time Updates - WebSocket Events",
+      "title": "Add WebSocket events for payments and reminders",
+      "description": "Update backend/src/websocket/socket.ts to emit 'payment-created', 'payment-updated' events to group rooms when payments change. Emit 'reminder-created', 'reminder-updated', 'reminder-deleted' for reminders. Follow existing 'expense-added' pattern. Broadcast to io.to(`group-${groupId}`).",
+      "files": ["backend/src/websocket/socket.ts"],
+      "dependencies": [6, 7],
+      "priority": "medium"
+    },
+    {
+      "id": 18,
+      "feature": "Real-time Updates - Frontend Listeners",
+      "title": "Add socket listeners in DebtSettlementManager",
+      "description": "In DebtSettlementManager component, use getSocket() from frontend/src/services/socket.ts. Add useEffect to listen for 'payment-created' and 'payment-updated' events. Call queryClient.invalidateQueries(['payments', groupId]) to refetch data. Follow pattern from GroupSpendingSummary's expense-added listener.",
+      "files": ["frontend/src/components/DebtSettlementManager.tsx"],
+      "dependencies": [11, 17],
+      "priority": "low"
+    },
+    {
+      "id": 19,
+      "feature": "Real-time Updates - Reminder Listeners",
+      "title": "Add socket listeners in RecurringReminderManager",
+      "description": "Add socket event listeners in RecurringReminderManager for 'reminder-created', 'reminder-updated', 'reminder-deleted'. Invalidate TanStack Query cache on events to trigger refetch. Use same pattern as debt settlement component.",
+      "files": ["frontend/src/components/RecurringReminderManager.tsx"],
+      "dependencies": [12, 17],
+      "priority": "low"
+    },
+    {
+      "id": 20,
+      "feature": "Audit Trail - Payment Operations",
+      "title": "Add audit logging for payment operations",
+      "description": "In backend/src/routes/payment.routes.ts, use Prisma audit extensions (.createWithAudit, .updateWithAudit, .deleteWithAudit) for all payment CRUD operations. Follow pattern from expense.routes.ts. Ensure user context is captured via req.jwtUser. Payment entity type should be 'Payment'.",
+      "files": ["backend/src/routes/payment.routes.ts"],
+      "dependencies": [6],
+      "priority": "medium"
+    },
+    {
+      "id": 21,
+      "feature": "Audit Trail - Reminder Operations",
+      "title": "Add audit logging for reminder operations",
+      "description": "In backend/src/routes/reminder.routes.ts, implement audit trail using Prisma extensions for all CRUD operations on RecurringReminder model. Entity type: 'RecurringReminder'. Capture old/new values for updates. Follow existing audit service patterns.",
+      "files": ["backend/src/routes/reminder.routes.ts"],
+      "dependencies": [7],
+      "priority": "medium"
+    },
+    {
+      "id": 22,
+      "feature": "UI Enhancement - Payment Status Badges",
+      "title": "Create PaymentStatusBadge component",
+      "description": "Create frontend/src/components/PaymentStatusBadge.tsx to display payment status with color-coded badges. Pending: yellow/amber, Completed: green, Cancelled: red/gray. Accept status prop and return styled badge using Tailwind. Reusable component. Use translation hook for status text.",
+      "files": ["frontend/src/components/PaymentStatusBadge.tsx"],
+      "dependencies": [4],
+      "priority": "low"
+    },
+    {
+      "id": 23,
+      "feature": "UI Enhancement - Reminder Frequency Badge",
+      "title": "Create ReminderFrequencyBadge component",
+      "description": "Create frontend/src/components/ReminderFrequencyBadge.tsx for displaying frequency with icons/emojis. Weekly: 📅, Monthly: 📆, Yearly: 🗓️, Every 6 months: 📋. Color-coded badges. Accept frequency prop, return styled component with Tailwind. Use translation for frequency text.",
+      "files": ["frontend/src/components/ReminderFrequencyBadge.tsx"],
+      "dependencies": [5],
+      "priority": "low"
+    },
+    {
+      "id": 24,
+      "feature": "Business Logic - Recurring Date Calculation",
+      "title": "Create utility function to calculate next due dates",
+      "description": "Create backend/src/utils/dateUtils.ts with calculateNextDueDate(currentDate: Date, frequency: string) function. Logic: weekly: +7 days, monthly: +1 month, yearly: +1 year, every_6_months: +6 months. Use proper date manipulation (consider month-end edge cases). Export typed function. Add unit tests if possible.",
+      "files": ["backend/src/utils/dateUtils.ts"],
+      "dependencies": [],
+      "priority": "medium"
+    },
+    {
+      "id": 25,
+      "feature": "Business Logic - Auto-update Reminder Due Dates",
+      "title": "Create scheduled job to update reminder due dates",
+      "description": "Create backend/src/services/reminder.service.ts with updateDueDates() function. Query all active reminders where nextDueDate <= now, calculate new nextDueDate using dateUtils, update database. This should be called periodically (consider node-cron or similar). Document how to run (could be manual initially or add to README).",
+      "files": ["backend/src/services/reminder.service.ts"],
+      "dependencies": [24],
+      "priority": "low"
+    },
+    {
+      "id": 26,
+      "feature": "Validation - Payment Creation",
+      "title": "Add validation for payment creation",
+      "description": "In backend/src/routes/payment.routes.ts POST endpoint, validate: amount > 0, fromUserId and toUserId exist and are different, both users are group members, description length < 500 chars. Return 400 with clear error messages. Consider using a validation library like Zod or manual checks.",
+      "files": ["backend/src/routes/payment.routes.ts"],
+      "dependencies": [6],
+      "priority": "medium"
+    },
+    {
+      "id": 27,
+      "feature": "Validation - Reminder Creation",
+      "title": "Add validation for reminder creation",
+      "description": "In backend/src/routes/reminder.routes.ts POST endpoint, validate: title not empty, amount >= 0, frequency is valid enum, nextDueDate is future date, groupId exists, user is group member. Return 400 with validation errors. Use consistent error format across API.",
+      "files": ["backend/src/routes/reminder.routes.ts"],
+      "dependencies": [7],
+      "priority": "medium"
+    },
+    {
+      "id": 28,
+      "feature": "UI Polish - Loading States",
+      "title": "Add loading skeletons to DebtSettlementManager",
+      "description": "In DebtSettlementManager component, add loading skeleton UI when data is being fetched (isLoading state from useQuery). Use Tailwind animate-pulse with gray rectangles. Follow pattern from GroupSpendingSummary loading state. Improve UX during data fetch.",
+      "files": ["frontend/src/components/DebtSettlementManager.tsx"],
+      "dependencies": [11],
+      "priority": "low"
+    },
+    {
+      "id": 29,
+      "feature": "UI Polish - Loading States",
+      "title": "Add loading skeletons to RecurringReminderManager",
+      "description": "Add loading state UI to RecurringReminderManager using Tailwind skeleton pattern. Show placeholder cards with pulsing animation while fetching reminders. Match styling with other components for consistency.",
+      "files": ["frontend/src/components/RecurringReminderManager.tsx"],
+      "dependencies": [12],
+      "priority": "low"
+    },
+    {
+      "id": 30,
+      "feature": "Documentation - API Endpoints",
+      "title": "Document new API endpoints in README",
+      "description": "Update README.md with API documentation for /api/payments and /api/reminders endpoints. Include: HTTP methods, request/response schemas, authentication requirements, example curl commands. Add to API Reference section. Keep consistent with existing documentation style.",
+      "files": ["README.md"],
+      "dependencies": [6, 7],
+      "priority": "low"
+    },
+    {
+      "id": 31,
+      "feature": "Testing - Manual Test Scenarios",
+      "title": "Create test scenarios document",
+      "description": "Create TESTING.md document with manual test scenarios for debt settlement and recurring reminders. Include: create/update/delete flows, permission checks, real-time updates, edge cases (negative amounts, invalid dates, etc.), group membership verification. Provide step-by-step test instructions.",
+      "files": ["TESTING.md"],
+      "dependencies": [15, 16],
+      "priority": "low"
+    },
+    {
+      "id": 32,
+      "feature": "Enhancement - Payment Confirmation Modal",
+      "title": "Add confirmation modal before marking payment complete",
+      "description": "In DebtSettlementManager, add a confirmation modal/dialog before marking payment as completed. Show payment details (from, to, amount) and ask for confirmation. Use browser confirm() initially or create custom modal component. Prevent accidental status changes.",
+      "files": ["frontend/src/components/DebtSettlementManager.tsx"],
+      "dependencies": [11],
+      "priority": "low"
+    },
+    {
+      "id": 33,
+      "feature": "Enhancement - Reminder Due Date Indicator",
+      "title": "Add visual indicator for overdue reminders",
+      "description": "In RecurringReminderManager, add logic to detect overdue reminders (nextDueDate < now). Display red badge/border for overdue items. Add 'OVERDUE' label. Sort reminders by due date with overdue at top. Use color coding: red (overdue), yellow (due within 3 days), green (future).",
+      "files": ["frontend/src/components/RecurringReminderManager.tsx"],
+      "dependencies": [12],
+      "priority": "low"
+    },
+    {
+      "id": 34,
+      "feature": "Mobile Responsive - Debt Settlement",
+      "title": "Ensure DebtSettlementManager is mobile responsive",
+      "description": "Review and update DebtSettlementManager component for mobile screens. Use Tailwind responsive classes (sm:, md:, lg:). Stack elements vertically on small screens. Ensure buttons are touch-friendly (min 44px height). Test on mobile viewport in browser DevTools. Follow HomePage responsive patterns.",
+      "files": ["frontend/src/components/DebtSettlementManager.tsx"],
+      "dependencies": [11],
+      "priority": "medium"
+    },
+    {
+      "id": 35,
+      "feature": "Mobile Responsive - Recurring Reminders",
+      "title": "Ensure RecurringReminderManager is mobile responsive",
+      "description": "Make RecurringReminderManager mobile-friendly using Tailwind responsive utilities. Cards should stack on mobile, form inputs full-width on small screens. Test on various viewport sizes. Ensure date pickers work on mobile devices. Follow existing responsive design patterns from GroupSpendingSummary.",
+      "files": ["frontend/src/components/RecurringReminderManager.tsx"],
+      "dependencies": [12],
+      "priority": "medium"
+    }
+  ],
+  "implementation_notes": {
+    "locale_requirement": "All user-facing strings MUST use useTranslation() hook from contexts/LanguageContext. NO hardcoded text in components. Add all translations to frontend/src/locales/tr.ts first.",
+    "authentication": "All API endpoints must use authenticateToken middleware. All operations must verify group membership via GroupMember table.",
+    "audit_trail": "Use Prisma audit extensions (.createWithAudit, .updateWithAudit, .deleteWithAudit) for all database operations to maintain audit logs.",
+    "real_time": "Use Socket.io for real-time updates. Emit events to group rooms: io.to(`group-${groupId}`). Frontend listens and invalidates React Query cache.",
+    "styling": "Use Tailwind CSS for all styling. Follow existing component patterns. Ensure responsive design with sm:, md:, lg: breakpoints.",
+    "type_safety": "Maintain full TypeScript type safety. Define types in frontend/src/types/index.ts to mirror Prisma models.",
+    "data_fetching": "Use TanStack Query (React Query) for all data fetching in frontend. Use mutations for create/update/delete operations.",
+    "error_handling": "Return proper HTTP status codes (400 for validation, 401 for auth, 403 for authorization, 404 for not found, 500 for server errors). Show user-friendly error messages in UI.",
+    "testing": "Test all features manually. Verify group membership checks, permission boundaries, real-time updates, and mobile responsiveness.",
+    "recurring_logic": "Reminders are NOT assigned to specific users. They are group-level notifications. Only track next due date and allow manual acknowledgment/snooze in future iterations."
+  },
+  "suggested_implementation_order": [
+    "Phase 1 - Foundation: Tasks 1-5 (Database schema + types)",
+    "Phase 2 - Backend: Tasks 6-8, 20-21, 24, 26-27 (API routes, validation, audit)",
+    "Phase 3 - Frontend API: Tasks 9-10, 13-14 (API services + localization)",
+    "Phase 4 - UI Components: Tasks 11-12, 22-23, 28-29 (Core components with loading states)",
+    "Phase 5 - Integration: Tasks 15-16, 34-35 (Add to pages, make responsive)",
+    "Phase 6 - Real-time: Tasks 17-19 (WebSocket integration)",
+    "Phase 7 - Polish: Tasks 25, 30-33 (Enhancements, docs, edge cases)"
+  ]
+}

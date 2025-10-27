@@ -6,6 +6,22 @@ import prisma from '../prisma';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
+/**
+ * WebSocket Events:
+ * 
+ * Emitted by server:
+ * - 'expense-added': When a new expense is created (emitted to group room)
+ * - 'payment-created': When a new payment is created (emitted from REST API to group room)
+ * - 'payment-updated': When a payment status is updated (emitted from REST API to group room)
+ * - 'reminder-created': When a new recurring reminder is created (emitted from REST API to group room)
+ * - 'reminder-updated': When a reminder is updated (emitted from REST API to group room)
+ * - 'reminder-deleted': When a reminder is deleted (emitted from REST API to group room)
+ * 
+ * Received from client:
+ * - 'join-group': Client joins a group room to receive updates
+ * - 'chat-message': Client sends a chat message for AI processing
+ */
+
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system' | 'tool';
   content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;

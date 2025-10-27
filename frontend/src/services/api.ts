@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Group, Expense, AuditLog, GroupMember } from '../types';
+import type { User, Group, Expense, AuditLog, GroupMember, Payment, PaymentStatus, RecurringReminder, ReminderFrequency } from '../types';
 import { config } from '../config/runtime';
 
 const API_URL = config.apiUrl;
@@ -55,7 +55,7 @@ api.interceptors.response.use(
 );
 
 // Re-export types
-export type { User, Group, Expense, AuditLog, GroupMember };
+export type { User, Group, Expense, AuditLog, GroupMember, Payment, PaymentStatus, RecurringReminder, ReminderFrequency };
 
 export const userApi = {
   getAll: () => api.get<User[]>('/users'),
@@ -116,4 +116,44 @@ export const auditApi = {
   getStats: () => api.get('/audit/stats'),
   getChanges: (entityType: string, entityId: string) =>
     api.get(`/audit/changes/${entityType}/${entityId}`),
+};
+
+export const paymentApi = {
+  getAll: (groupId?: string) =>
+    api.get<Payment[]>('/payments', { params: { groupId } }),
+  getById: (id: string) => api.get<Payment>(`/payments/${id}`),
+  create: (data: {
+    fromUserId: string;
+    toUserId: string;
+    groupId: string;
+    amount: number;
+    description?: string;
+  }) => api.post<Payment>('/payments', data),
+  updateStatus: (id: string, status: PaymentStatus, description?: string) =>
+    api.put<Payment>(`/payments/${id}`, { status, description }),
+  delete: (id: string) => api.delete(`/payments/${id}`),
+};
+
+export const reminderApi = {
+  getAll: (groupId?: string) =>
+    api.get<RecurringReminder[]>('/reminders', { params: { groupId } }),
+  getById: (id: string) => api.get<RecurringReminder>(`/reminders/${id}`),
+  create: (data: {
+    title: string;
+    description?: string;
+    amount: number;
+    frequency: ReminderFrequency;
+    groupId: string;
+    nextDueDate: string;
+  }) => api.post<RecurringReminder>('/reminders', data),
+  update: (id: string, data: {
+    title?: string;
+    description?: string;
+    amount?: number;
+    frequency?: ReminderFrequency;
+    nextDueDate?: string;
+  }) => api.put<RecurringReminder>(`/reminders/${id}`, data),
+  toggleActive: (id: string) =>
+    api.patch<RecurringReminder>(`/reminders/${id}/toggle`),
+  delete: (id: string) => api.delete(`/reminders/${id}`),
 };

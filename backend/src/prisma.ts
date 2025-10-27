@@ -151,6 +151,44 @@ const extendedPrisma = basePrisma.$extends({
         return result;
       },
     },
+    payment: {
+      async createWithAudit(args: any) {
+        const result = await basePrisma.payment.create(args);
+        await createAuditLog('Payment', result.id, 'CREATE', null, result);
+        return result;
+      },
+      async updateWithAudit(args: any) {
+        const oldValues = await basePrisma.payment.findUnique({ where: args.where });
+        const result = await basePrisma.payment.update(args);
+        await createAuditLog('Payment', result.id, 'UPDATE', oldValues, result);
+        return result;
+      },
+      async deleteWithAudit(args: any) {
+        const oldValues = await basePrisma.payment.findUnique({ where: args.where });
+        const result = await basePrisma.payment.delete(args);
+        await createAuditLog('Payment', result.id, 'DELETE', oldValues, null);
+        return result;
+      },
+    },
+    recurringReminder: {
+      async createWithAudit(args: any) {
+        const result = await basePrisma.recurringReminder.create(args);
+        await createAuditLog('RecurringReminder', result.id, 'CREATE', null, result);
+        return result;
+      },
+      async updateWithAudit(args: any) {
+        const oldValues = await basePrisma.recurringReminder.findUnique({ where: args.where });
+        const result = await basePrisma.recurringReminder.update(args);
+        await createAuditLog('RecurringReminder', result.id, 'UPDATE', oldValues, result);
+        return result;
+      },
+      async deleteWithAudit(args: any) {
+        const oldValues = await basePrisma.recurringReminder.findUnique({ where: args.where });
+        const result = await basePrisma.recurringReminder.delete(args);
+        await createAuditLog('RecurringReminder', result.id, 'DELETE', oldValues, null);
+        return result;
+      },
+    },
   },
 });
 

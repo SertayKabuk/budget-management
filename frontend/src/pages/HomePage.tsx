@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { groupApi } from '../services/api';
 import MultimodalChatInterface from '../components/MultimodalChatInterface';
 import GroupSpendingSummary from '../components/GroupSpendingSummary';
+import RecurringReminderManager from '../components/RecurringReminderManager';
 import { getSocket } from '../services/socket';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -91,6 +92,11 @@ export default function HomePage() {
           {/* Group Spending Summary */}
           <div className="mb-4 sm:mb-6">
             <GroupSpendingSummary groupId={selectedGroupId} />
+          </div>
+
+          {/* Recurring Reminders */}
+          <div className="mb-4 sm:mb-6">
+            <RecurringReminderManager groupId={selectedGroupId} />
           </div>
 
           {/* Unified Multimodal Chat Interface */}
