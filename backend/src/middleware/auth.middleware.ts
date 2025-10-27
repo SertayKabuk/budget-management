@@ -88,3 +88,103 @@ export const clearAuditContextMiddleware = (req: Request, res: Response, next: N
   });
   next();
 };
+
+// Authorization Helper Functions
+
+/**
+ * Check if a user is a group admin for a specific group
+ * @param userId - The user ID to check
+ * @param groupId - The group ID to check
+ * @returns true if user is a group admin, false otherwise
+ */
+export async function isGroupAdmin(userId: string, groupId: string): Promise<boolean> {
+  const prisma = (await import('../prisma')).default;
+  const groupMember = await prisma.groupMember.findFirst({
+    where: {
+      userId,
+      groupId,
+      role: 'admin'
+    }
+  });
+  return !!groupMember;
+}
+
+/**
+ * Check if a user is a group admin OR a global admin
+ * @param userId - The user ID to check
+ * @param groupId - The group ID to check
+ * @param userGlobalRole - The user's global role (optional)
+ * @returns true if user is a group admin or global admin, false otherwise
+ */
+export async function isGroupAdminOrGlobalAdmin(
+  userId: string, 
+  groupId: string, 
+  userGlobalRole?: string
+): Promise<boolean> {
+  if (userGlobalRole === 'admin') return true;
+  return await isGroupAdmin(userId, groupId);
+}
+
+/**
+ * Check if a user is the expense owner OR a group admin OR a global admin
+ * @param userId - The user ID to check
+ * @param expenseId - The expense ID to check
+ * @param userGlobalRole - The user's global role (optional)
+ * @returns true if user has permission to edit the expense, false otherwise
+ */
+export async function isExpenseOwnerOrAdmin(
+  userId: string, 
+  expenseId: string, 
+  userGlobalRole?: string
+): Promise<boolean> {
+  const prisma = (await import('../prisma')).default;
+  
+  // Global admin bypass
+  if (userGlobalRole === 'admin') return true;
+  
+  // Fetch expense
+  const expense = await prisma.expense.findUnique({
+    where: { id: expenseId },
+    select: { userId: true, groupId: true }
+  });
+  
+  if (!expense) return false;
+  
+  // Check if user is the owner
+  if (expense.userId === userId) return true;
+  
+  // Check if user is a group admin
+  return await isGroupAdmin(userId, expense.groupId);
+}
+
+/**
+ * Check if a user is a payment participant OR a group admin OR a global admin
+ * @param userId - The user ID to check
+ * @param paymentId - The payment ID to check
+ * @param userGlobalRole - The user's global role (optional)
+ * @returns true if user has permission to edit the payment, false otherwise
+ */
+export async function isPaymentParticipantOrAdmin(
+  userId: string, 
+  paymentId: string, 
+  userGlobalRole?: string
+): Promise<boolean> {
+  const prisma = (await import('../prisma')).default;
+  
+  // Global admin bypass
+  if (userGlobalRole === 'admin') return true;
+  
+  // Fetch payment
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    select: { fromUserId: true, toUserId: true, groupId: true }
+  });
+  
+  if (!payment) return false;
+  
+  // Check if user is a participant
+  if (payment.fromUserId === userId || payment.toUserId === userId) return true;
+  
+  // Check if user is a group admin
+  return await isGroupAdmin(userId, payment.groupId);
+}

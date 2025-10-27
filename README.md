@@ -37,6 +37,50 @@ A modern, real-time expense tracking and budget management application with AI-p
 - **Export Functionality**: Export expense data to Excel (XLSX format)
 - **Multi-language Support**: Turkish and English interface (i18n)
 
+## Authorization & Role-Based Access Control
+
+The application implements a three-tier role system:
+
+### 1. Global Admin (User.role = 'admin')
+- **God Mode**: Full access to entire application
+- Can view and edit ALL groups (even if not a member)
+- Can manage any expense, payment, reminder in any group
+- Can promote/demote users' global admin status
+- Can view all audit logs across the system
+- Access to Admin Dashboard and User Role Management page
+
+### 2. Group Admin (GroupMember.role = 'admin')
+- **Group-Level Management**: Full control within specific groups where they are admin
+- **Automatically assigned** when creating a new group
+- Can edit group settings (name, description)
+- Can add/remove members to/from their groups
+- Can promote/demote members to/from group admin within their groups
+- Can edit/delete ANY expense or payment within their groups (not just own)
+- Can create/edit/delete reminders in their groups
+- Can view audit logs for their groups
+- Normal member permissions in groups where they are not admin
+
+### 3. Regular Member (GroupMember.role = 'member')
+- **Standard Access**: View-only for group data, edit-only for own contributions
+- Can view all expenses, payments, and reminders in their groups
+- Can create expenses and payments in their groups
+- Can edit/delete only their OWN expenses
+- Can edit/delete only payments where they are the payer or payee
+- Cannot edit group settings or manage members
+- Cannot create/edit/delete reminders
+- Cannot view audit logs
+
+### Group Creation & Ownership
+- **Any authenticated user can create a group**
+- **Group creator is automatically assigned as group admin** for that group
+- This ensures every group has at least one admin who can manage it
+- Additional members can be promoted to admin by existing group admins
+
+### Promoting Users
+- **Global Admin**: Use the Admin Dashboard → User Role Management page
+- **Group Admin**: Use the Group page → Members section → Role dropdown (visible to group admins only)
+- **Automatic**: Group creators are automatically group admins (no manual promotion needed)
+
 ## Architecture
 
 ### Tech Stack

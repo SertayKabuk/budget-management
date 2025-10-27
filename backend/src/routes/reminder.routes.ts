@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../prisma';
-import { authenticateToken } from '../middleware/auth.middleware';
+import { authenticateToken, isGroupAdminOrGlobalAdmin } from '../middleware/auth.middleware';
 import { ReminderFrequency } from '@prisma/client';
 
 const router = Router();
@@ -162,6 +162,19 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
     }
 
+    // Verify user is group admin or global admin
+    const hasPermission = await isGroupAdminOrGlobalAdmin(
+      authenticatedUserId,
+      groupId,
+      req.jwtUser?.role
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: Only group admins can create reminders'
+      });
+    }
+
     const reminder = await prisma.recurringReminder.createWithAudit({
       data: {
         title: title.trim(),
@@ -216,6 +229,19 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     if (!groupMembership) {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+    }
+
+    // Verify user is group admin or global admin
+    const hasPermission = await isGroupAdminOrGlobalAdmin(
+      userId,
+      existingReminder.groupId,
+      req.jwtUser?.role
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: Only group admins can edit reminders'
+      });
     }
 
     // Validation for provided fields
@@ -301,6 +327,19 @@ router.patch('/:id/toggle', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
     }
 
+    // Verify user is group admin or global admin
+    const hasPermission = await isGroupAdminOrGlobalAdmin(
+      userId,
+      existingReminder.groupId,
+      req.jwtUser?.role
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: Only group admins can toggle reminders'
+      });
+    }
+
     const reminder = await prisma.recurringReminder.updateWithAudit({
       where: { id },
       data: {
@@ -348,6 +387,19 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     if (!groupMembership) {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+    }
+
+    // Verify user is group admin or global admin
+    const hasPermission = await isGroupAdminOrGlobalAdmin(
+      userId,
+      existingReminder.groupId,
+      req.jwtUser?.role
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: Only group admins can delete reminders'
+      });
     }
 
     await prisma.recurringReminder.deleteWithAudit({

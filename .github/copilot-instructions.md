@@ -54,22 +54,48 @@ Frontend uses **runtime configuration** - change `VITE_API_URL`/`VITE_WS_URL` wi
 ## Project-Specific Conventions
 
 ### Authentication & Authorization
-**Google OAuth → JWT → Role-Based Access Control**
+**Google OAuth → JWT → Three-Tier Role-Based Access Control**
 - OAuth config: `backend/src/config/passport.ts` (Passport.js Google OAuth20 strategy)
 - JWT middleware: `backend/src/middleware/auth.middleware.ts`
   - `authenticateToken`: Validates JWT, sets `req.jwtUser`, initializes audit context
-  - `requireAdmin`: Checks `jwtUser.role === 'admin'` (for user management pages)
+  - `requireAdmin`: Checks `jwtUser.role === 'admin'` (for global admin pages)
   - `optionalAuth`: Non-blocking auth for public endpoints
+  - `isGroupAdmin(userId, groupId)`: Checks if user is admin of specific group
+  - `isGroupAdminOrGlobalAdmin(userId, groupId, userRole)`: Authorization helper (global admin bypass)
+  - `isExpenseOwnerOrAdmin(userId, expenseId, userRole)`: Checks expense edit permission
+  - `isPaymentParticipantOrAdmin(userId, paymentId, userRole)`: Checks payment edit permission
 - WebSocket auth: Socket.io middleware validates JWT from handshake auth token
 - Frontend: JWT in localStorage, auto-attached via axios interceptor (`frontend/src/services/api.ts`)
-- Auth context: `frontend/src/contexts/AuthContext.tsx` (user state, login/logout)
+- Auth context: `frontend/src/contexts/AuthContext.tsx` (user state, login/logout, isAdmin check)
+- Group role hook: `frontend/src/hooks/useGroupRole.ts` (check user's role in specific group)
 
-**Group Access Control**: All expense/payment operations verify user is group member via:
+**Three-Tier Role System**:
+1. **Global Admin** (`User.role === 'admin'`): God mode - can access/edit everything
+2. **Group Admin** (`GroupMember.role === 'admin'`): Can manage everything in their specific group(s)
+   - Automatically assigned when creating a new group
+   - Can edit group settings, manage members, promote/demote group admins
+   - Can edit/delete ANY expense, payment, reminder in their groups
+3. **Regular Member** (`GroupMember.role === 'member'`): Can only edit own expenses/payments
+
+**Authorization Pattern in Routes**:
 ```typescript
-const groupMembership = await prisma.groupMember.findFirst({
-  where: { groupId, userId: req.jwtUser.id }
-});
-if (!groupMembership) return res.status(403).json({ error: 'Access denied' });
+// Example: Restrict action to owner OR group admin OR global admin
+const hasPermission = await isExpenseOwnerOrAdmin(userId, expenseId, req.jwtUser?.role);
+if (!hasPermission) {
+  return res.status(403).json({ error: 'Access denied: You can only edit your own expenses unless you are a group admin' });
+}
+```
+
+**Group Admin Checks**: All expense/payment edit/delete operations verify:
+1. User is group member (403 if not)
+2. User is owner OR group admin OR global admin (403 if not)
+
+**Frontend Authorization Pattern**:
+```typescript
+// Check role in component
+const { isGroupAdmin } = useGroupRole(groupId);
+// Conditionally render admin controls
+{isGroupAdmin && <AdminButton />}
 ```
 
 ### Audit Logging System

@@ -4,6 +4,8 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { expenseApi, fetchAuthenticatedImage } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency } from '../utils/currency';
+import { useAuth } from '../contexts/AuthContext';
+import { useGroupRole } from '../hooks/useGroupRole';
 
 interface Props {
   groupId: string;
@@ -14,6 +16,8 @@ type PresetFilter = 'current-month' | 'last-month' | 'all';
 export default function ExpenseList({ groupId }: Props) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { user, isAdmin: isGlobalAdmin } = useAuth();
+  const { isGroupAdmin } = useGroupRole(groupId);
   
   // Fetch expenses
   const { data: expenses = [] } = useQuery({
@@ -611,20 +615,24 @@ export default function ExpenseList({ groupId }: Props) {
                       {formatCurrency(expense.amount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right space-x-2">
-                      <button
-                        onClick={() => handleEdit(expense)}
-                        className="text-blue-600 hover:text-blue-900"
-                        title={t.expenses.edit}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => handleDelete(expense.id, expense.description)}
-                        className="text-red-600 hover:text-red-900"
-                        title={t.expenses.delete}
-                      >
-                        🗑️
-                      </button>
+                      {(expense.user.id === user?.id || isGroupAdmin || isGlobalAdmin) && (
+                        <>
+                          <button
+                            onClick={() => handleEdit(expense)}
+                            className="text-blue-600 hover:text-blue-900"
+                            title={t.expenses.edit}
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleDelete(expense.id, expense.description)}
+                            className="text-red-600 hover:text-red-900"
+                            title={t.expenses.delete}
+                          >
+                            🗑️
+                          </button>
+                        </>
+                      )}
                     </td>
                   </>
                 )}
@@ -733,20 +741,22 @@ export default function ExpenseList({ groupId }: Props) {
                   <span>{expense.user.name}</span>
                   <span>{new Date(expense.date).toLocaleDateString()}</span>
                 </div>
-                <div className="flex gap-2 pt-2 border-t">
-                  <button
-                    onClick={() => handleEdit(expense)}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm"
-                  >
-                    ✏️ {t.expenses.edit}
-                  </button>
-                  <button
-                    onClick={() => handleDelete(expense.id, expense.description)}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm"
-                  >
-                    🗑️ {t.expenses.delete}
-                  </button>
-                </div>
+                {(expense.user.id === user?.id || isGroupAdmin || isGlobalAdmin) && (
+                  <div className="flex gap-2 pt-2 border-t">
+                    <button
+                      onClick={() => handleEdit(expense)}
+                      className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm"
+                    >
+                      ✏️ {t.expenses.edit}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(expense.id, expense.description)}
+                      className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm"
+                    >
+                      🗑️ {t.expenses.delete}
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>

@@ -1,6 +1,6 @@
 import express from 'express';
 import { basePrisma as prisma } from '../prisma';
-import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
+import { authenticateToken, requireAdmin, isGroupAdminOrGlobalAdmin } from '../middleware/auth.middleware';
 
 const router = express.Router();
 
@@ -134,6 +134,52 @@ router.get('/stats', authenticateToken, requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error fetching audit stats:', error);
     res.status(500).json({ error: 'Failed to fetch audit stats' });
+  }
+});
+
+/**
+ * GET /api/audit/group/:groupId - Get audit logs for a specific group (group admin or global admin)
+ */
+router.get('/group/:groupId', authenticateToken, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.jwtUser?.id;
+    const userRole = req.jwtUser?.role;
+    const limit = parseInt(req.query.limit as string) || 100;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Verify user is group admin or global admin
+    const hasPermission = await isGroupAdminOrGlobalAdmin(userId, groupId, userRole);
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: Only group admins can view audit logs'
+      });
+    }
+
+    // Fetch audit logs for entities in this group
+    const auditLogs = await prisma.auditLog.findMany({
+      where: {
+        OR: [
+          { entityType: 'Group', entityId: groupId },
+          { entityType: 'GroupMember', newValues: { path: ['groupId'], equals: groupId } },
+          { entityType: 'Expense', newValues: { path: ['groupId'], equals: groupId } },
+          { entityType: 'Payment', newValues: { path: ['groupId'], equals: groupId } },
+          { entityType: 'RecurringReminder', newValues: { path: ['groupId'], equals: groupId } },
+        ]
+      },
+      orderBy: {
+        timestamp: 'desc',
+      },
+      take: Math.min(limit, 500),
+    });
+
+    res.json(auditLogs);
+  } catch (error) {
+    console.error('Error fetching group audit logs:', error);
+    res.status(500).json({ error: 'Failed to fetch group audit logs' });
   }
 });
 

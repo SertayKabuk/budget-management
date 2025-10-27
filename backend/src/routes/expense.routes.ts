@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../prisma';
-import { authenticateToken } from '../middleware/auth.middleware';
+import { authenticateToken, isExpenseOwnerOrAdmin } from '../middleware/auth.middleware';
 import fs from 'fs';
 import path from 'path';
 
@@ -248,6 +248,19 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
     }
 
+    // Verify user has permission (is owner, group admin, or global admin)
+    const hasPermission = await isExpenseOwnerOrAdmin(
+      userId,
+      id,
+      req.jwtUser?.role
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: You can only edit your own expenses unless you are a group admin'
+      });
+    }
+
     const expense = await prisma.expense.updateWithAudit({
       where: { id },
       data: {
@@ -297,6 +310,19 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     if (!groupMembership) {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+    }
+
+    // Verify user has permission (is owner, group admin, or global admin)
+    const hasPermission = await isExpenseOwnerOrAdmin(
+      userId,
+      id,
+      req.jwtUser?.role
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: You can only delete your own expenses unless you are a group admin'
+      });
     }
 
     await prisma.expense.deleteWithAudit({

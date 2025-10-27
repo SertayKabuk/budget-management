@@ -9,11 +9,13 @@ import RecurringReminderManager from '../components/RecurringReminderManager';
 import { useEffect, useState } from 'react';
 import { getSocket } from '../services/socket';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useGroupRole } from '../hooks/useGroupRole';
 
 export default function GroupPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { isGroupAdmin } = useGroupRole(id);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
@@ -159,16 +161,18 @@ export default function GroupPage() {
                   <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 break-words flex-1 leading-tight">
                     {group.name}
                   </h1>
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 rounded-lg transition-all"
-                    title={t.group.edit.editButton}
-                    aria-label={t.group.edit.editButton}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                    </svg>
-                  </button>
+                  {isGroupAdmin && (
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 rounded-lg transition-all"
+                      title={t.group.edit.editButton}
+                      aria-label={t.group.edit.editButton}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
                 {group.description && (
                   <p className="text-gray-600 text-base sm:text-lg leading-relaxed bg-gray-50 p-3 rounded-lg border-l-4 border-blue-400">
@@ -198,6 +202,7 @@ export default function GroupPage() {
             members={(group.members || [])
               .filter((m): m is typeof m & { user: NonNullable<typeof m.user> } => !!m.user)
               .map(m => ({
+                id: m.id,
                 user: {
                   id: m.user.id,
                   name: m.user.name,

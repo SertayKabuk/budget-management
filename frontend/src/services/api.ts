@@ -76,6 +76,10 @@ export const groupApi = {
     api.put<Group>(`/groups/${id}`, data),
   addMember: (groupId: string, userId: string, role?: string) =>
     api.post(`/groups/${groupId}/members`, { userId, role }),
+  removeMember: (groupId: string, memberId: string) => 
+    api.delete(`/groups/${groupId}/members/${memberId}`),
+  updateMemberRole: (groupId: string, memberId: string, role: string) =>
+    api.patch(`/groups/${groupId}/members/${memberId}/role`, { role }),
 };
 
 export const expenseApi = {
@@ -113,6 +117,8 @@ export const auditApi = {
     api.get<AuditLog[]>(`/audit/entity/${entityType}/${entityId}`, { params: { limit } }),
   getByUser: (userId: string, limit?: number) =>
     api.get<AuditLog[]>(`/audit/user/${userId}`, { params: { limit } }),
+  getByGroup: (groupId: string, limit?: number) =>
+    api.get<AuditLog[]>(`/audit/group/${groupId}`, { params: { limit } }),
   getStats: () => api.get('/audit/stats'),
   getChanges: (entityType: string, entityId: string) =>
     api.get(`/audit/changes/${entityType}/${entityId}`),

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../prisma';
-import { authenticateToken } from '../middleware/auth.middleware';
+import { authenticateToken, isPaymentParticipantOrAdmin } from '../middleware/auth.middleware';
 import { PaymentStatus } from '@prisma/client';
 
 const router = Router();
@@ -226,6 +226,19 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
     }
 
+    // Verify user has permission (is participant, group admin, or global admin)
+    const hasPermission = await isPaymentParticipantOrAdmin(
+      userId,
+      id,
+      req.jwtUser?.role
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: You can only edit payments involving yourself unless you are a group admin'
+      });
+    }
+
     // Validate status if provided
     if (status && !Object.values(PaymentStatus).includes(status)) {
       return res.status(400).json({ error: 'Invalid status value' });
@@ -324,6 +337,19 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     if (!groupMembership) {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+    }
+
+    // Verify user has permission (is participant, group admin, or global admin)
+    const hasPermission = await isPaymentParticipantOrAdmin(
+      userId,
+      id,
+      req.jwtUser?.role
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: You can only delete payments involving yourself unless you are a group admin'
+      });
     }
 
     await prisma.payment.deleteWithAudit({

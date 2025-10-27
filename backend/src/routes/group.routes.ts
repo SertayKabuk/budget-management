@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../prisma';
-import { authenticateToken } from '../middleware/auth.middleware';
+import { authenticateToken, isGroupAdminOrGlobalAdmin } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -156,13 +156,35 @@ router.get('/:id/summary', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const { name, description } = req.body;
+    const userId = req.jwtUser?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
 
     if (!name) {
       return res.status(400).json({ error: 'Group name is required' });
     }
 
+    // Create group and automatically add creator as admin member
     const group = await prisma.group.createWithAudit({
-      data: { name, description }
+      data: { 
+        name, 
+        description,
+        members: {
+          create: {
+            userId: userId,
+            role: 'admin'
+          }
+        }
+      },
+      include: {
+        members: {
+          include: {
+            user: { select: { id: true, name: true, email: true } }
+          }
+        }
+      }
     });
 
     res.status(201).json(group);
@@ -187,18 +209,17 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Group name is required' });
     }
 
-    // Admin users can update any group, regular users must be members
-    if (userRole !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: id,
-          userId: userId
-        }
-      });
+    // Verify user is group admin or global admin
+    const hasPermission = await isGroupAdminOrGlobalAdmin(
+      userId,
+      id,
+      userRole
+    );
 
-      if (!groupMembership) {
-        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
-      }
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: Only group admins can edit group settings'
+      });
     }
 
     const group = await prisma.group.updateWithAudit({
@@ -228,18 +249,17 @@ router.post('/:id/members', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    // Admin users can add members to any group, regular users must be members
-    if (authenticatedUserRole !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: id,
-          userId: authenticatedUserId
-        }
-      });
+    // Verify user is group admin or global admin
+    const hasPermission = await isGroupAdminOrGlobalAdmin(
+      authenticatedUserId,
+      id,
+      authenticatedUserRole
+    );
 
-      if (!groupMembership) {
-        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
-      }
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: Only group admins can add members'
+      });
     }
 
     // Check if the user being added already exists
@@ -304,6 +324,113 @@ router.get('/:id/members', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching group members:', error);
     res.status(500).json({ error: 'Failed to fetch group members' });
+  }
+});
+
+router.delete('/:groupId/members/:memberId', async (req: Request, res: Response) => {
+  try {
+    const { groupId, memberId } = req.params;
+    const userId = req.jwtUser?.id;
+    const userRole = req.jwtUser?.role;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Verify user is group admin or global admin
+    const hasPermission = await isGroupAdminOrGlobalAdmin(userId, groupId, userRole);
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: Only group admins can remove members'
+      });
+    }
+
+    // Prevent removing self if last admin
+    const groupMember = await prisma.groupMember.findUnique({
+      where: { id: memberId }
+    });
+
+    if (!groupMember) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    if (groupMember.userId === userId && groupMember.role === 'admin') {
+      const adminCount = await prisma.groupMember.count({
+        where: { groupId, role: 'admin' }
+      });
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          error: 'Cannot remove the last group admin. Promote another member first.'
+        });
+      }
+    }
+
+    await prisma.groupMember.deleteWithAudit({
+      where: { id: memberId }
+    });
+
+    res.json({ message: 'Member removed successfully' });
+  } catch (error) {
+    console.error('Error removing member:', error);
+    res.status(500).json({ error: 'Failed to remove member' });
+  }
+});
+
+router.patch('/:groupId/members/:memberId/role', async (req: Request, res: Response) => {
+  try {
+    const { groupId, memberId } = req.params;
+    const { role } = req.body;
+    const userId = req.jwtUser?.id;
+    const userRole = req.jwtUser?.role;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    if (!role || !['member', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Must be "member" or "admin"' });
+    }
+
+    // Verify user is group admin or global admin
+    const hasPermission = await isGroupAdminOrGlobalAdmin(userId, groupId, userRole);
+    if (!hasPermission) {
+      return res.status(403).json({
+        error: 'Access denied: Only group admins can change member roles'
+      });
+    }
+
+    const groupMember = await prisma.groupMember.findUnique({
+      where: { id: memberId }
+    });
+
+    if (!groupMember) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    // Prevent demoting self if last admin
+    if (groupMember.userId === userId && groupMember.role === 'admin' && role === 'member') {
+      const adminCount = await prisma.groupMember.count({
+        where: { groupId, role: 'admin' }
+      });
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          error: 'Cannot demote yourself as the last group admin. Promote another member first.'
+        });
+      }
+    }
+
+    const updatedMember = await prisma.groupMember.updateWithAudit({
+      where: { id: memberId },
+      data: { role },
+      include: {
+        user: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    res.json(updatedMember);
+  } catch (error) {
+    console.error('Error updating member role:', error);
+    res.status(500).json({ error: 'Failed to update member role' });
   }
 });
 

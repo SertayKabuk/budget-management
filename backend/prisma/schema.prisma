@@ -18,7 +18,7 @@ model User {
   googleId     String?  @unique
   picture      String?
   refreshToken String?
-  role         String   @default("user") // user, admin
+  role         String   @default("user") // Global role: "user" (default) or "admin" (god mode - can access/edit everything)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
@@ -46,7 +46,7 @@ model GroupMember {
   id        String   @id @default(uuid())
   userId    String
   groupId   String
-  role      String   @default("member")
+  role      String   @default("member") // Group-level role: "member" (default, can only edit own data) or "admin" (can manage group, edit all data in group)
   joinedAt  DateTime @default(now())
   
   user  User  @relation(fields: [userId], references: [id])

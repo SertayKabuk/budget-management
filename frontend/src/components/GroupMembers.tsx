@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { groupApi, userApi } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useGroupRole } from '../hooks/useGroupRole';
 
 interface GroupMembersProps {
   groupId: string;
   members: Array<{
+    id: string;
     user: {
       id: string;
       name: string;
@@ -17,6 +20,8 @@ interface GroupMembersProps {
 
 export default function GroupMembers({ groupId, members }: GroupMembersProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const { isGroupAdmin } = useGroupRole(groupId);
   const [showAddMember, setShowAddMember] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedRole, setSelectedRole] = useState('member');
@@ -37,9 +42,27 @@ export default function GroupMembers({ groupId, members }: GroupMembersProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
       setShowAddMember(false);
       setSelectedUserId('');
       setSelectedRole('member');
+    },
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: (memberId: string) => groupApi.removeMember(groupId, memberId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
+    },
+  });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ memberId, role }: { memberId: string; role: string }) =>
+      groupApi.updateMemberRole(groupId, memberId, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
     },
   });
 
@@ -56,15 +79,17 @@ export default function GroupMembers({ groupId, members }: GroupMembersProps) {
     <div className="bg-white rounded-lg shadow p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
         <h3 className="text-base sm:text-lg font-semibold">{t.members.title}</h3>
-        <button
-          onClick={() => setShowAddMember(!showAddMember)}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-2 rounded text-xs sm:text-sm whitespace-nowrap w-full sm:w-auto"
-        >
-          {showAddMember ? t.members.cancel : t.members.addMember}
-        </button>
+        {isGroupAdmin && (
+          <button
+            onClick={() => setShowAddMember(!showAddMember)}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-2 rounded text-xs sm:text-sm whitespace-nowrap w-full sm:w-auto"
+          >
+            {showAddMember ? t.members.cancel : t.members.addMember}
+          </button>
+        )}
       </div>
 
-      {showAddMember && (
+      {showAddMember && isGroupAdmin && (
         <form onSubmit={handleAddMember} className="mb-4 p-3 sm:p-4 bg-gray-50 rounded">
           <div className="mb-3">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
@@ -77,7 +102,7 @@ export default function GroupMembers({ groupId, members }: GroupMembersProps) {
               required
             >
               <option value="">{t.members.chooseUser}</option>
-              {availableUsers.map((user) => (
+              {availableUsers.map((user: any) => (
                 <option key={user.id} value={user.id}>
                   {user.name} ({user.email})
                 </option>
@@ -127,16 +152,66 @@ export default function GroupMembers({ groupId, members }: GroupMembersProps) {
               key={member.user.id}
               className="flex items-center justify-between p-3 border rounded hover:bg-gray-50"
             >
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 mr-2">
                 <h4 className="font-medium text-sm sm:text-base truncate">{member.user.name}</h4>
                 <p className="text-xs sm:text-sm text-gray-600 truncate">{member.user.email}</p>
               </div>
-              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded ml-2 whitespace-nowrap">
-                {member.role}
-              </span>
+              
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Role Badge/Dropdown */}
+                {isGroupAdmin ? (
+                  <select
+                    value={member.role}
+                    onChange={(e) => updateRoleMutation.mutate({
+                      memberId: member.id,
+                      role: e.target.value
+                    })}
+                    className="text-xs px-2 py-1 border rounded"
+                    disabled={updateRoleMutation.isPending}
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                ) : (
+                  <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
+                    member.role === 'admin' 
+                      ? 'bg-purple-100 text-purple-800' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {member.role}
+                  </span>
+                )}
+
+                {/* Remove Button (only for group admins) */}
+                {isGroupAdmin && member.user.id !== user?.id && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Remove ${member.user.name} from this group?`)) {
+                        removeMemberMutation.mutate(member.id);
+                      }
+                    }}
+                    disabled={removeMemberMutation.isPending}
+                    className="text-red-600 hover:text-red-800 text-xs sm:text-sm px-2 py-1 rounded hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
+      )}
+
+      {removeMemberMutation.isError && (
+        <p className="text-red-500 text-xs sm:text-sm mt-2">
+          Error removing member: {(removeMemberMutation.error as Error).message}
+        </p>
+      )}
+
+      {updateRoleMutation.isError && (
+        <p className="text-red-500 text-xs sm:text-sm mt-2">
+          Error updating role: {(updateRoleMutation.error as Error).message}
+        </p>
       )}
     </div>
   );

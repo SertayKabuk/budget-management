@@ -26,7 +26,7 @@ export default function CalendarModal({ groupId, isOpen, onClose }: CalendarModa
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 p-2 text-gray-400 hover:text-gray-600 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+            className="absolute -top-2 -right-2 z-50 p-2 text-white bg-gray-800 hover:bg-gray-700 rounded-full shadow-lg transition-colors"
             aria-label="Close calendar"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
