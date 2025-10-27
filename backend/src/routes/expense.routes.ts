@@ -3,6 +3,7 @@ import prisma from '../prisma';
 import { authenticateToken, isExpenseOwnerOrAdmin } from '../middleware/auth.middleware';
 import fs from 'fs';
 import path from 'path';
+import { convertDecimalsToNumbers } from '../utils/decimalUtils';
 
 const router = Router();
 
@@ -96,7 +97,7 @@ router.get('/', async (req: Request, res: Response) => {
         orderBy: { date: 'desc' }
       });
 
-      return res.json(expenses);
+      return res.json(convertDecimalsToNumbers(expenses));
     }
 
     // If no groupId specified, return expenses from all groups where user is a member
@@ -120,7 +121,7 @@ router.get('/', async (req: Request, res: Response) => {
       orderBy: { date: 'desc' }
     });
 
-    res.json(expenses);
+    res.json(convertDecimalsToNumbers(expenses));
   } catch (error) {
     console.error('Error fetching expenses:', error);
     res.status(500).json({ error: 'Failed to fetch expenses' });
@@ -160,7 +161,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
     }
 
-    res.json(expense);
+    res.json(convertDecimalsToNumbers(expense));
   } catch (error) {
     console.error('Error fetching expense:', error);
     res.status(500).json({ error: 'Failed to fetch expense' });
@@ -207,7 +208,7 @@ router.post('/', async (req: Request, res: Response) => {
       }
     });
 
-    res.status(201).json(expense);
+    res.status(201).json(convertDecimalsToNumbers(expense));
   } catch (error) {
     console.error('Error creating expense:', error);
     res.status(500).json({ error: 'Failed to create expense' });
@@ -275,7 +276,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       }
     });
 
-    res.json(expense);
+    res.json(convertDecimalsToNumbers(expense));
   } catch (error) {
     console.error('Error updating expense:', error);
     res.status(500).json({ error: 'Failed to update expense' });

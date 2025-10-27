@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import prisma from '../prisma';
 import { authenticateToken, isGroupAdminOrGlobalAdmin } from '../middleware/auth.middleware';
 import { ReminderFrequency } from '@prisma/client';
+import { convertDecimalsToNumbers } from '../utils/decimalUtils';
 
 const router = Router();
 
@@ -40,7 +41,7 @@ router.get('/', async (req: Request, res: Response) => {
         orderBy: { nextDueDate: 'asc' }
       });
 
-      return res.json(reminders);
+      return res.json(convertDecimalsToNumbers(reminders));
     }
 
     // If no groupId specified, return reminders from all groups where user is a member
@@ -64,7 +65,7 @@ router.get('/', async (req: Request, res: Response) => {
       orderBy: { nextDueDate: 'asc' }
     });
 
-    res.json(reminders);
+    res.json(convertDecimalsToNumbers(reminders));
   } catch (error) {
     console.error('Error fetching reminders:', error);
     res.status(500).json({ error: 'Failed to fetch reminders' });
@@ -105,7 +106,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
     }
 
-    res.json(reminder);
+    res.json(convertDecimalsToNumbers(reminder));
   } catch (error) {
     console.error('Error fetching reminder:', error);
     res.status(500).json({ error: 'Failed to fetch reminder' });
@@ -192,7 +193,7 @@ router.post('/', async (req: Request, res: Response) => {
       }
     });
 
-    res.status(201).json(reminder);
+    res.status(201).json(convertDecimalsToNumbers(reminder));
   } catch (error) {
     console.error('Error creating reminder:', error);
     res.status(500).json({ error: 'Failed to create reminder' });
@@ -289,7 +290,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       }
     });
 
-    res.json(reminder);
+    res.json(convertDecimalsToNumbers(reminder));
   } catch (error) {
     console.error('Error updating reminder:', error);
     res.status(500).json({ error: 'Failed to update reminder' });
@@ -351,7 +352,7 @@ router.patch('/:id/toggle', async (req: Request, res: Response) => {
       }
     });
 
-    res.json(reminder);
+    res.json(convertDecimalsToNumbers(reminder));
   } catch (error) {
     console.error('Error toggling reminder:', error);
     res.status(500).json({ error: 'Failed to toggle reminder' });

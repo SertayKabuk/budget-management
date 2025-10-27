@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../prisma';
 import { authenticateToken, isGroupAdminOrGlobalAdmin } from '../middleware/auth.middleware';
+import { convertDecimalsToNumbers } from '../utils/decimalUtils';
 
 const router = Router();
 
@@ -37,7 +38,7 @@ router.get('/', async (req: Request, res: Response) => {
       }
     });
 
-    res.json(groups);
+    res.json(convertDecimalsToNumbers(groups));
   } catch (error) {
     console.error('Error fetching groups:', error);
     res.status(500).json({ error: 'Failed to fetch groups' });
@@ -89,7 +90,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    res.json(group);
+    res.json(convertDecimalsToNumbers(group));
   } catch (error) {
     console.error('Error fetching group:', error);
     res.status(500).json({ error: 'Failed to fetch group' });
@@ -127,9 +128,12 @@ router.get('/:id/summary', async (req: Request, res: Response) => {
       }
     });
 
-    const totalSpending = expenses.reduce((sum: number, exp: any) => sum + exp.amount, 0);
+    // Convert Decimal amounts to numbers for proper calculation
+    const expensesWithNumbers = convertDecimalsToNumbers(expenses);
     
-    const spendingByUser = expenses.reduce((acc: Record<string, any>, exp: any) => {
+    const totalSpending = expensesWithNumbers.reduce((sum: number, exp: any) => sum + exp.amount, 0);
+    
+    const spendingByUser = expensesWithNumbers.reduce((acc: Record<string, any>, exp: any) => {
       if (!acc[exp.userId]) {
         acc[exp.userId] = {
           user: exp.user,
@@ -144,7 +148,7 @@ router.get('/:id/summary', async (req: Request, res: Response) => {
 
     res.json({
       totalSpending,
-      expenseCount: expenses.length,
+      expenseCount: expensesWithNumbers.length,
       spendingByUser: Object.values(spendingByUser)
     });
   } catch (error) {
@@ -187,7 +191,7 @@ router.post('/', async (req: Request, res: Response) => {
       }
     });
 
-    res.status(201).json(group);
+    res.status(201).json(convertDecimalsToNumbers(group));
   } catch (error) {
     console.error('Error creating group:', error);
     res.status(500).json({ error: 'Failed to create group' });
@@ -227,7 +231,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       data: { name, description }
     });
 
-    res.json(group);
+    res.json(convertDecimalsToNumbers(group));
   } catch (error) {
     console.error('Error updating group:', error);
     res.status(500).json({ error: 'Failed to update group' });
@@ -282,7 +286,7 @@ router.post('/:id/members', async (req: Request, res: Response) => {
       }
     });
 
-    res.status(201).json(member);
+    res.status(201).json(convertDecimalsToNumbers(member));
   } catch (error) {
     console.error('Error adding member:', error);
     res.status(500).json({ error: 'Failed to add member' });
@@ -320,7 +324,7 @@ router.get('/:id/members', async (req: Request, res: Response) => {
       }
     });
 
-    res.json(members);
+    res.json(convertDecimalsToNumbers(members));
   } catch (error) {
     console.error('Error fetching group members:', error);
     res.status(500).json({ error: 'Failed to fetch group members' });
@@ -462,7 +466,7 @@ router.patch('/:groupId/members/:memberId/role', async (req: Request, res: Respo
       }
     });
 
-    res.json(updatedMember);
+    res.json(convertDecimalsToNumbers(updatedMember));
   } catch (error) {
     console.error('Error updating member role:', error);
     res.status(500).json({ error: 'Failed to update member role' });

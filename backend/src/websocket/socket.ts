@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { chatWithAIAndTools, chatWithAIAndToolsStream } from '../services/openai.service';
 import { saveBase64Image } from '../utils/fileUtils';
 import prisma from '../prisma';
+import { convertDecimalsToNumbers } from '../utils/decimalUtils';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
@@ -126,9 +127,9 @@ async function executeCreateExpense(
     },
   });
 
-  // Emit to all group members
+  // Emit to all group members (convert Decimal to number)
   io.to(`group-${groupId}`).emit('expense-added', {
-    expense,
+    expense: convertDecimalsToNumbers(expense),
     addedBy: userName,
   });
 
