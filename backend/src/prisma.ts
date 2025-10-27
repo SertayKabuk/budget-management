@@ -189,6 +189,25 @@ const extendedPrisma = basePrisma.$extends({
         return result;
       },
     },
+    groupInvite: {
+      async createWithAudit(args: any) {
+        const result = await basePrisma.groupInvite.create(args);
+        await createAuditLog('GroupInvite', result.id, 'CREATE', null, result);
+        return result;
+      },
+      async updateWithAudit(args: any) {
+        const oldValues = await basePrisma.groupInvite.findUnique({ where: args.where });
+        const result = await basePrisma.groupInvite.update(args);
+        await createAuditLog('GroupInvite', result.id, 'UPDATE', oldValues, result);
+        return result;
+      },
+      async deleteWithAudit(args: any) {
+        const oldValues = await basePrisma.groupInvite.findUnique({ where: args.where });
+        const result = await basePrisma.groupInvite.delete(args);
+        await createAuditLog('GroupInvite', result.id, 'DELETE', oldValues, null);
+        return result;
+      },
+    },
   },
 });
 

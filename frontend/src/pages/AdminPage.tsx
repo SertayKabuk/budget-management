@@ -94,17 +94,15 @@ export default function AdminPage() {
         <div className="bg-white rounded-lg shadow p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
             <h2 className="text-lg sm:text-xl font-semibold">{t.admin.groups.title}</h2>
-            {isGlobalAdmin && (
-              <button
-                onClick={() => setShowNewGroup(!showNewGroup)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-2 rounded text-sm sm:text-base whitespace-nowrap"
-              >
-                {showNewGroup ? t.admin.groups.cancel : t.admin.groups.newGroup}
-              </button>
-            )}
+            <button
+              onClick={() => setShowNewGroup(!showNewGroup)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-2 rounded text-sm sm:text-base whitespace-nowrap"
+            >
+              {showNewGroup ? t.admin.groups.cancel : t.admin.groups.newGroup}
+            </button>
           </div>
 
-          {showNewGroup && isGlobalAdmin && (
+          {showNewGroup && (
             <form onSubmit={handleCreateGroup} className="mb-4 p-3 sm:p-4 bg-gray-50 rounded">
               <input
                 name="name"

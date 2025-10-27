@@ -198,7 +198,8 @@ export default function GroupPage() {
 
         <div>
           <GroupMembers 
-            groupId={id!} 
+            groupId={id!}
+            groupName={group.name}
             members={(group.members || [])
               .filter((m): m is typeof m & { user: NonNullable<typeof m.user> } => !!m.user)
               .map(m => ({

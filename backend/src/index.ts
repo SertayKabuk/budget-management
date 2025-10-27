@@ -13,6 +13,7 @@ import authRoutes from './routes/auth.routes';
 import auditRoutes from './routes/audit.routes';
 import paymentRoutes from './routes/payment.routes';
 import reminderRoutes from './routes/reminder.routes';
+import inviteRoutes from './routes/invite.routes';
 import { setupWebSocket } from './websocket/socket';
 import { authenticateToken, clearAuditContextMiddleware } from './middleware/auth.middleware';
 
@@ -52,6 +53,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reminders', reminderRoutes);
+app.use('/api', inviteRoutes);
 
 setupWebSocket(io);
 

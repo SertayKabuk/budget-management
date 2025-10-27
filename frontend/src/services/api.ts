@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Group, Expense, AuditLog, GroupMember, Payment, PaymentStatus, RecurringReminder, ReminderFrequency } from '../types';
+import type { User, Group, Expense, AuditLog, GroupMember, Payment, PaymentStatus, RecurringReminder, ReminderFrequency, GroupInvite } from '../types';
 import { config } from '../config/runtime';
 
 const API_URL = config.apiUrl;
@@ -55,7 +55,7 @@ api.interceptors.response.use(
 );
 
 // Re-export types
-export type { User, Group, Expense, AuditLog, GroupMember, Payment, PaymentStatus, RecurringReminder, ReminderFrequency };
+export type { User, Group, Expense, AuditLog, GroupMember, Payment, PaymentStatus, RecurringReminder, ReminderFrequency, GroupInvite };
 
 export const userApi = {
   getAll: () => api.get<User[]>('/users'),
@@ -169,4 +169,14 @@ export const reminderApi = {
   toggleActive: (id: string) =>
     api.patch<RecurringReminder>(`/reminders/${id}/toggle`),
   delete: (id: string) => api.delete(`/reminders/${id}`),
+};
+
+export const inviteApi = {
+  create: (groupId: string, data?: { expiresIn?: number; maxUses?: number }) =>
+    api.post<GroupInvite>(`/groups/${groupId}/invites`, data),
+  getByCode: (code: string) => api.get<GroupInvite>(`/invites/${code}`),
+  accept: (code: string) => api.post(`/invites/${code}/accept`),
+  getAll: (groupId: string) =>
+    api.get<GroupInvite[]>(`/groups/${groupId}/invites`),
+  revoke: (code: string) => api.delete(`/invites/${code}`),
 };

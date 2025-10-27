@@ -83,3 +83,30 @@ export interface RecurringReminder {
   createdBy?: User;
   group?: Group;
 }
+
+export type InviteStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED';
+
+export interface GroupInvite {
+  id: string;
+  code: string;
+  groupId: string;
+  invitedById: string;
+  createdAt: string;
+  expiresAt?: string;
+  maxUses?: number;
+  usedCount: number;
+  status: InviteStatus;
+  group?: {
+    id: string;
+    name: string;
+    description?: string;
+    _count?: {
+      members: number;
+    };
+  };
+  invitedBy?: {
+    name: string;
+    picture?: string;
+  };
+  alreadyMember?: boolean;
+}

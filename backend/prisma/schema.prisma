@@ -27,6 +27,7 @@ model User {
   paymentsFrom       Payment[] @relation("PaymentFrom")
   paymentsTo         Payment[] @relation("PaymentTo")
   createdReminders   RecurringReminder[]
+  createdInvites     GroupInvite[]
 }
 
 model Group {
@@ -40,6 +41,7 @@ model Group {
   expenses          Expense[]
   payments          Payment[]
   recurringReminders RecurringReminder[]
+  invites           GroupInvite[]
 }
 
 model GroupMember {
@@ -53,11 +55,14 @@ model GroupMember {
   group Group @relation(fields: [groupId], references: [id])
   
   @@unique([userId, groupId])
+  @@index([userId])
+  @@index([groupId])
+  @@index([userId, role])
 }
 
 model Expense {
   id          String   @id @default(uuid())
-  amount      Float
+  amount      Decimal  @db.Decimal(10, 2)
   description String
   category    String?
   date        DateTime @default(now())
@@ -70,6 +75,10 @@ model Expense {
   
   user  User  @relation(fields: [userId], references: [id])
   group Group @relation(fields: [groupId], references: [id])
+  
+  @@index([groupId, date])
+  @@index([userId])
+  @@index([category])
 }
 
 model AuditLog {
@@ -85,7 +94,7 @@ model AuditLog {
   ipAddress   String?
   userAgent   String?
   
-  @@index([entityType, entityId])
+  @@index([entityType, entityId, timestamp])
   @@index([userId])
   @@index([timestamp])
 }
@@ -98,7 +107,7 @@ enum PaymentStatus {
 
 model Payment {
   id          String        @id @default(uuid())
-  amount      Float
+  amount      Decimal       @db.Decimal(10, 2)
   fromUserId  String
   toUserId    String
   groupId     String
@@ -116,6 +125,8 @@ model Payment {
   @@index([fromUserId])
   @@index([toUserId])
   @@index([status])
+  @@index([groupId, status])
+  @@index([groupId, createdAt])
 }
 
 enum ReminderFrequency {
@@ -129,7 +140,7 @@ model RecurringReminder {
   id          String            @id @default(uuid())
   title       String
   description String?
-  amount      Float
+  amount      Decimal           @db.Decimal(10, 2)
   frequency   ReminderFrequency
   groupId     String
   nextDueDate DateTime
@@ -144,4 +155,30 @@ model RecurringReminder {
   @@index([groupId])
   @@index([nextDueDate])
   @@index([isActive])
+  @@index([groupId, isActive, nextDueDate])
+}
+
+enum InviteStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+model GroupInvite {
+  id          String       @id @default(uuid())
+  code        String       @unique @default(cuid())
+  groupId     String
+  invitedById String
+  createdAt   DateTime     @default(now())
+  expiresAt   DateTime?    // Optional expiration date
+  maxUses     Int?         // Optional limit on number of uses (null = unlimited)
+  usedCount   Int          @default(0)
+  status      InviteStatus @default(ACTIVE)
+  
+  group      Group @relation(fields: [groupId], references: [id])
+  invitedBy  User  @relation(fields: [invitedById], references: [id])
+  
+  @@index([code])
+  @@index([groupId])
+  @@index([status])
 }

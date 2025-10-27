@@ -4,9 +4,11 @@ import { groupApi, userApi } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useGroupRole } from '../hooks/useGroupRole';
+import { InviteModal } from './InviteModal';
 
 interface GroupMembersProps {
   groupId: string;
+  groupName?: string;
   members: Array<{
     id: string;
     user: {
@@ -18,11 +20,12 @@ interface GroupMembersProps {
   }>;
 }
 
-export default function GroupMembers({ groupId, members }: GroupMembersProps) {
+export default function GroupMembers({ groupId, groupName, members }: GroupMembersProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { isGroupAdmin } = useGroupRole(groupId);
   const [showAddMember, setShowAddMember] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedRole, setSelectedRole] = useState('member');
   const queryClient = useQueryClient();
@@ -85,14 +88,30 @@ export default function GroupMembers({ groupId, members }: GroupMembersProps) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
         <h3 className="text-base sm:text-lg font-semibold">{t.members.title}</h3>
         {isGroupAdmin && (
-          <button
-            onClick={() => setShowAddMember(!showAddMember)}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-2 rounded text-xs sm:text-sm whitespace-nowrap w-full sm:w-auto"
-          >
-            {showAddMember ? t.members.cancel : t.members.addMember}
-          </button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="bg-green-500 hover:bg-green-600 text-white px-3 sm:px-4 py-2 rounded text-xs sm:text-sm whitespace-nowrap flex-1 sm:flex-none"
+            >
+              {t.members.invite}
+            </button>
+            <button
+              onClick={() => setShowAddMember(!showAddMember)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-2 rounded text-xs sm:text-sm whitespace-nowrap flex-1 sm:flex-none"
+            >
+              {showAddMember ? t.members.cancel : t.members.addMember}
+            </button>
+          </div>
         )}
       </div>
+
+      {showInviteModal && (
+        <InviteModal
+          groupId={groupId}
+          groupName={groupName || 'Grup'}
+          onClose={() => setShowInviteModal(false)}
+        />
+      )}
 
       {showAddMember && isGroupAdmin && (
         <form onSubmit={handleAddMember} className="mb-4 p-3 sm:p-4 bg-gray-50 rounded">

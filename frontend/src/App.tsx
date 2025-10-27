@@ -14,6 +14,7 @@ import AuthCallbackPage from './pages/AuthCallbackPage';
 import UserRoleManagementPage from './pages/UserRoleManagementPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import AuditLogsPage from './pages/AuditLogsPage';
+import InviteAcceptPage from './pages/InviteAcceptPage';
 
 const queryClient = new QueryClient();
 
@@ -201,6 +202,7 @@ function AppContent() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/invite/:code" element={<InviteAcceptPage />} />
           <Route
             path="/"
             element={
