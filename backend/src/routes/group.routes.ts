@@ -365,6 +365,41 @@ router.delete('/:groupId/members/:memberId', async (req: Request, res: Response)
       }
     }
 
+    // Check if user has any financial data in the group
+    const [expenseCount, paymentsFromCount, paymentsToCount] = await Promise.all([
+      prisma.expense.count({
+        where: {
+          groupId: groupId,
+          userId: groupMember.userId
+        }
+      }),
+      prisma.payment.count({
+        where: {
+          groupId: groupId,
+          fromUserId: groupMember.userId
+        }
+      }),
+      prisma.payment.count({
+        where: {
+          groupId: groupId,
+          toUserId: groupMember.userId
+        }
+      })
+    ]);
+
+    const totalFinancialRecords = expenseCount + paymentsFromCount + paymentsToCount;
+
+    if (totalFinancialRecords > 0) {
+      return res.status(400).json({
+        error: `Cannot remove member: They have ${expenseCount} expense(s) and ${paymentsFromCount + paymentsToCount} payment(s) in this group. Removing them would break debt calculations. Please settle debts first or keep them as a member.`,
+        details: {
+          expenses: expenseCount,
+          paymentsFrom: paymentsFromCount,
+          paymentsTo: paymentsToCount
+        }
+      });
+    }
+
     await prisma.groupMember.deleteWithAudit({
       where: { id: memberId }
     });

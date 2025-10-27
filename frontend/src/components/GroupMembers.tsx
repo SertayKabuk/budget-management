@@ -55,6 +55,11 @@ export default function GroupMembers({ groupId, members }: GroupMembersProps) {
       queryClient.invalidateQueries({ queryKey: ['group', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
     },
+    onError: (error: any) => {
+      // Extract detailed error message if available
+      const errorMessage = error.response?.data?.error || error.message;
+      console.error('Error removing member:', errorMessage, error.response?.data?.details);
+    }
   });
 
   const updateRoleMutation = useMutation({
@@ -169,8 +174,8 @@ export default function GroupMembers({ groupId, members }: GroupMembersProps) {
                     className="text-xs px-2 py-1 border rounded"
                     disabled={updateRoleMutation.isPending}
                   >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
+                    <option value="member">{t.members.roleMember}</option>
+                    <option value="admin">{t.members.roleAdmin}</option>
                   </select>
                 ) : (
                   <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
@@ -178,7 +183,7 @@ export default function GroupMembers({ groupId, members }: GroupMembersProps) {
                       ? 'bg-purple-100 text-purple-800' 
                       : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {member.role}
+                    {member.role === 'admin' ? t.members.roleAdmin : t.members.roleMember}
                   </span>
                 )}
 
@@ -186,14 +191,14 @@ export default function GroupMembers({ groupId, members }: GroupMembersProps) {
                 {isGroupAdmin && member.user.id !== user?.id && (
                   <button
                     onClick={() => {
-                      if (confirm(`Remove ${member.user.name} from this group?`)) {
+                      if (confirm(t.members.confirmRemove.replace('{name}', member.user.name))) {
                         removeMemberMutation.mutate(member.id);
                       }
                     }}
                     disabled={removeMemberMutation.isPending}
                     className="text-red-600 hover:text-red-800 text-xs sm:text-sm px-2 py-1 rounded hover:bg-red-50 disabled:opacity-50"
                   >
-                    Remove
+                    {t.members.remove}
                   </button>
                 )}
               </div>
@@ -203,14 +208,18 @@ export default function GroupMembers({ groupId, members }: GroupMembersProps) {
       )}
 
       {removeMemberMutation.isError && (
-        <p className="text-red-500 text-xs sm:text-sm mt-2">
-          Error removing member: {(removeMemberMutation.error as Error).message}
-        </p>
+        <div className="text-red-500 text-xs sm:text-sm mt-2 p-3 bg-red-50 rounded">
+          <p className="font-semibold">{t.members.errorRemovingMember}:</p>
+          <p className="mt-1">
+            {(removeMemberMutation.error as any)?.response?.data?.error || 
+             (removeMemberMutation.error as Error).message}
+          </p>
+        </div>
       )}
 
       {updateRoleMutation.isError && (
         <p className="text-red-500 text-xs sm:text-sm mt-2">
-          Error updating role: {(updateRoleMutation.error as Error).message}
+          {t.members.errorUpdatingRole}: {(updateRoleMutation.error as Error).message}
         </p>
       )}
     </div>

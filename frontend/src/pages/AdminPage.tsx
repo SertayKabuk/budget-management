@@ -127,7 +127,7 @@ export default function AdminPage() {
                 <Link
                   to={`/group/${group.id}`}
                   className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 sm:px-3 py-1 rounded"
-                  title="View details"
+                  title={t.admin.groups.details}
                 >
                   {t.admin.groups.details}
                 </Link>

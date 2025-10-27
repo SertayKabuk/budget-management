@@ -54,6 +54,7 @@ The application implements a three-tier role system:
 - **Automatically assigned** when creating a new group
 - Can edit group settings (name, description)
 - Can add/remove members to/from their groups
+  - ⚠️ **Cannot remove members who have expenses or payments** (prevents data integrity issues)
 - Can promote/demote members to/from group admin within their groups
 - Can edit/delete ANY expense or payment within their groups (not just own)
 - Can create/edit/delete reminders in their groups

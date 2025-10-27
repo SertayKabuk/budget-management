@@ -181,6 +181,10 @@ export const tr = {
     noMembers: 'Bu grupta henüz üye yok.',
     noMembersHelp: 'Harcamaları takip etmeye başlamak için üye ekleyin!',
     error: 'Hata',
+    errorRemovingMember: 'Üye kaldırılırken hata',
+    errorUpdatingRole: 'Rol güncellenirken hata',
+    remove: 'Kaldır',
+    confirmRemove: '{name} kullanıcısını bu gruptan kaldırmak istediğinizden emin misiniz?',
   },
 
   // Expense List

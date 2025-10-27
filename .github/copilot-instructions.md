@@ -75,6 +75,7 @@ Frontend uses **runtime configuration** - change `VITE_API_URL`/`VITE_WS_URL` wi
    - Automatically assigned when creating a new group
    - Can edit group settings, manage members, promote/demote group admins
    - Can edit/delete ANY expense, payment, reminder in their groups
+   - ⚠️ **Cannot remove members with financial data** (expenses/payments) - validation prevents data integrity issues
 3. **Regular Member** (`GroupMember.role === 'member'`): Can only edit own expenses/payments
 
 **Authorization Pattern in Routes**:
