@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import prisma from '../prisma';
 import { authenticateToken, isPaymentParticipantOrAdmin } from '../middleware/auth.middleware';
 import { PaymentStatus } from '@prisma/client';
+import { convertDecimalsToNumbers } from '../utils/decimalUtils';
 
 const router = Router();
 
@@ -41,7 +42,7 @@ router.get('/', async (req: Request, res: Response) => {
         orderBy: { createdAt: 'desc' }
       });
 
-      return res.json(payments);
+      return res.json(convertDecimalsToNumbers(payments));
     }
 
     // If no groupId specified, return payments from all groups where user is a member
@@ -66,7 +67,7 @@ router.get('/', async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json(payments);
+    res.json(convertDecimalsToNumbers(payments));
   } catch (error) {
     console.error('Error fetching payments:', error);
     res.status(500).json({ error: 'Failed to fetch payments' });
@@ -108,7 +109,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
     }
 
-    res.json(payment);
+    res.json(convertDecimalsToNumbers(payment));
   } catch (error) {
     console.error('Error fetching payment:', error);
     res.status(500).json({ error: 'Failed to fetch payment' });
@@ -187,7 +188,7 @@ router.post('/', async (req: Request, res: Response) => {
       }
     });
 
-    res.status(201).json(payment);
+    res.status(201).json(convertDecimalsToNumbers(payment));
   } catch (error) {
     console.error('Error creating payment:', error);
     res.status(500).json({ error: 'Failed to create payment' });
@@ -301,7 +302,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       }
     });
 
-    res.json(payment);
+    res.json(convertDecimalsToNumbers(payment));
   } catch (error) {
     console.error('Error updating payment:', error);
     res.status(500).json({ error: 'Failed to update payment' });
