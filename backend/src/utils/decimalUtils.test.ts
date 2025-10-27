@@ -75,7 +75,7 @@ describe('convertDecimalsToNumbers', () => {
     const converted = convertDecimalsToNumbers(expenses);
     
     // Now we can safely reduce with numbers
-    const total = converted.reduce((sum: number, exp: any) => sum + exp.amount, 0);
+    const total = converted.reduce((sum: number, exp: { amount: number }) => sum + exp.amount, 0);
     
     expect(total).toBe(176.50);
     expect(typeof total).toBe('number');
