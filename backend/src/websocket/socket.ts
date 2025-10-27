@@ -255,13 +255,13 @@ async function executeQueryDatabase(
       });
 
       // Calculate total and fair share
-      const totalSpent = expensesPerUser.reduce((sum, e) => sum + (e._sum.amount || 0), 0);
+      const totalSpent = expensesPerUser.reduce((sum, e) => sum + Number(e._sum.amount || 0), 0);
       const fairShare = totalSpent / members.length;
 
       // Calculate balances (positive = owed, negative = owes)
       const balances = members.map(member => {
         const userExpense = expensesPerUser.find(e => e.userId === member.user.id);
-        const spent = userExpense?._sum.amount || 0;
+        const spent = Number(userExpense?._sum.amount || 0);
         const balance = spent - fairShare;
 
         return {
@@ -286,13 +286,13 @@ async function executeQueryDatabase(
         // Payment sender has paid, so their debt decreases (balance increases)
         const fromUser = balances.find(b => b.userId === payment.fromUserId);
         if (fromUser) {
-          fromUser.balance += payment.amount;
+          fromUser.balance += Number(payment.amount);
         }
 
         // Payment receiver has been paid, so what they're owed decreases (balance decreases)
         const toUser = balances.find(b => b.userId === payment.toUserId);
         if (toUser) {
-          toUser.balance -= payment.amount;
+          toUser.balance -= Number(payment.amount);
         }
       });
 
@@ -369,7 +369,7 @@ async function executeQueryDatabase(
           return {
             userId: member.user.id,
             userName: member.user.name,
-            total: result._sum.amount || 0,
+            total: Number(result._sum.amount || 0),
             count: result._count,
           };
         })
