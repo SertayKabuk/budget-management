@@ -31,6 +31,7 @@ export const tr = {
     uploadInvoice: '📷 Fatura Fotoğrafı Yükle',
     chatWithAI: '💬 AI Asistanı ile Sohbet',
     chatSubtitle: 'Harcamanızı anlatın, sizin için ekleyeyim!',
+    viewRemindersPrompt: 'Grup sayfasına git ve hatırlatıcıları yönet',
   },
 
   // Admin Page
@@ -565,6 +566,36 @@ export const tr = {
       tomorrow: 'Yarın',
       days: '{count} gün içinde',
       overdue: '{count} gün gecikmiş',
+    },
+    notifications: {
+      title: 'Hatırlatıcı Bildirimleri',
+      noNotifications: 'Bildirim yok',
+      viewAll: 'Tümünü Gör',
+    },
+  },
+
+  // Calendar
+  calendar: {
+    title: 'Takvim',
+    today: 'Bugün',
+    expense: 'Harcama',
+    payment: 'Ödeme',
+    reminder: 'Hatırlatıcı',
+    by: 'Tarafından',
+    more: 'daha fazla',
+    totalForDay: 'Gün Toplamı',
+    totalExpenses: 'Toplam Harcamalar',
+    totalPayments: 'Toplam Ödemeler',
+    upcomingReminders: 'Yaklaşan Hatırlatıcılar',
+    items: 'işlem',
+    days: {
+      sun: 'Paz',
+      mon: 'Pzt',
+      tue: 'Sal',
+      wed: 'Çar',
+      thu: 'Per',
+      fri: 'Cum',
+      sat: 'Cmt',
     },
   },
 

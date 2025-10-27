@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { paymentApi, expenseApi } from '../services/api';
+import { paymentApi, expenseApi, groupApi } from '../services/api';
 import { getSocket } from '../services/socket';
 import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency } from '../utils/currency';
@@ -23,6 +23,13 @@ export default function DebtSettlementManager({ groupId }: DebtSettlementManager
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const [showHistory, setShowHistory] = useState(false);
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualPaymentData, setManualPaymentData] = useState({
+    fromUserId: '',
+    toUserId: '',
+    amount: '',
+    description: '',
+  });
 
   // Fetch expenses to calculate settlements
   const { data: expenses } = useQuery({
@@ -39,6 +46,16 @@ export default function DebtSettlementManager({ groupId }: DebtSettlementManager
     queryKey: ['payments', groupId],
     queryFn: async () => {
       const response = await paymentApi.getAll(groupId);
+      return response.data;
+    },
+    enabled: !!groupId,
+  });
+
+  // Fetch group members for manual payment form
+  const { data: group } = useQuery({
+    queryKey: ['group', groupId],
+    queryFn: async () => {
+      const response = await groupApi.getById(groupId);
       return response.data;
     },
     enabled: !!groupId,
@@ -176,6 +193,49 @@ export default function DebtSettlementManager({ groupId }: DebtSettlementManager
     }
   };
 
+  const handleManualPaymentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualPaymentData.fromUserId || !manualPaymentData.toUserId || !manualPaymentData.amount) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    if (parseFloat(manualPaymentData.amount) <= 0) {
+      alert('Amount must be greater than 0');
+      return;
+    }
+    if (manualPaymentData.fromUserId === manualPaymentData.toUserId) {
+      alert('From and To users must be different');
+      return;
+    }
+
+    createPaymentMutation.mutate({
+      fromUserId: manualPaymentData.fromUserId,
+      toUserId: manualPaymentData.toUserId,
+      amount: parseFloat(manualPaymentData.amount),
+      description: manualPaymentData.description || 'Manual payment',
+    }, {
+      onSuccess: () => {
+        setShowManualForm(false);
+        setManualPaymentData({
+          fromUserId: '',
+          toUserId: '',
+          amount: '',
+          description: '',
+        });
+      },
+    });
+  };
+
+  const resetManualForm = () => {
+    setShowManualForm(false);
+    setManualPaymentData({
+      fromUserId: '',
+      toUserId: '',
+      amount: '',
+      description: '',
+    });
+  };
+
   if (paymentsLoading) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-6">
@@ -238,6 +298,116 @@ export default function DebtSettlementManager({ groupId }: DebtSettlementManager
             <p className="text-sm sm:text-base text-gray-600 mt-2">{t.spending.settlement.balanced}</p>
             <p className="text-xs sm:text-sm text-gray-500 mt-1">{t.spending.settlement.balancedDesc}</p>
           </div>
+        )}
+      </div>
+
+      {/* Manual Payment Creation */}
+      <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
+            ➕ {t.payments.createPayment}
+          </h3>
+          <button
+            onClick={() => {
+              if (showManualForm) {
+                resetManualForm();
+              } else {
+                setShowManualForm(true);
+              }
+            }}
+            className="px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            {showManualForm ? t.common.cancel : '+ ' + t.common.create}
+          </button>
+        </div>
+
+        {showManualForm && (
+          <form onSubmit={handleManualPaymentSubmit} className="space-y-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.payments.from} *
+                </label>
+                <select
+                  value={manualPaymentData.fromUserId}
+                  onChange={(e) => setManualPaymentData({ ...manualPaymentData, fromUserId: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="">Select user...</option>
+                  {group?.members?.map((member: any) => (
+                    <option key={member.user.id} value={member.user.id}>
+                      {member.user.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.payments.to} *
+                </label>
+                <select
+                  value={manualPaymentData.toUserId}
+                  onChange={(e) => setManualPaymentData({ ...manualPaymentData, toUserId: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="">Select user...</option>
+                  {group?.members?.map((member: any) => (
+                    <option key={member.user.id} value={member.user.id}>
+                      {member.user.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t.payments.amount} *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={manualPaymentData.amount}
+                onChange={(e) => setManualPaymentData({ ...manualPaymentData, amount: e.target.value })}
+                required
+                placeholder="0.00"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t.payments.description}
+              </label>
+              <textarea
+                value={manualPaymentData.description}
+                onChange={(e) => setManualPaymentData({ ...manualPaymentData, description: e.target.value })}
+                placeholder="Optional description..."
+                rows={2}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="submit"
+                disabled={createPaymentMutation.isPending}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {createPaymentMutation.isPending ? t.common.loading : t.common.create}
+              </button>
+              <button
+                type="button"
+                onClick={resetManualForm}
+                className="px-4 py-2 bg-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                {t.common.cancel}
+              </button>
+            </div>
+          </form>
         )}
       </div>
 

@@ -5,6 +5,7 @@ import ExpenseList from '../components/ExpenseList';
 import GroupSpendingSummary from '../components/GroupSpendingSummary';
 import GroupMembers from '../components/GroupMembers';
 import DebtSettlementManager from '../components/DebtSettlementManager';
+import RecurringReminderManager from '../components/RecurringReminderManager';
 import { useEffect, useState } from 'react';
 import { getSocket } from '../services/socket';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -199,6 +200,11 @@ export default function GroupPage() {
       {/* Debt Settlement Section */}
       <div className="mb-4 sm:mb-6">
         <DebtSettlementManager groupId={id!} />
+      </div>
+
+      {/* Recurring Reminders Section */}
+      <div className="mb-4 sm:mb-6">
+        <RecurringReminderManager groupId={id!} />
       </div>
 
       <div className="bg-white rounded-lg shadow">

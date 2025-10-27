@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { groupApi } from '../services/api';
 import MultimodalChatInterface from '../components/MultimodalChatInterface';
 import GroupSpendingSummary from '../components/GroupSpendingSummary';
-import RecurringReminderManager from '../components/RecurringReminderManager';
+import ReminderAlertBanner from '../components/ReminderAlertBanner';
+import CalendarModal from '../components/CalendarModal';
 import { getSocket } from '../services/socket';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -12,6 +13,7 @@ export default function HomePage() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const { data: groups } = useQuery({
     queryKey: ['groups'],
@@ -33,9 +35,19 @@ export default function HomePage() {
   // Auto-select first group if available
   useEffect(() => {
     if (groups && groups.length > 0 && !selectedGroupId) {
-      setSelectedGroupId(groups[0].id);
+      const firstGroupId = groups[0].id;
+      setSelectedGroupId(firstGroupId);
+      localStorage.setItem('selectedGroupId', firstGroupId);
+      window.dispatchEvent(new Event('groupSelectionChanged'));
     }
   }, [groups, selectedGroupId]);
+
+  // Update localStorage when group changes
+  const handleGroupChange = (groupId: string) => {
+    setSelectedGroupId(groupId);
+    localStorage.setItem('selectedGroupId', groupId);
+    window.dispatchEvent(new Event('groupSelectionChanged'));
+  };
 
   // Join socket room when group is selected
   useEffect(() => {
@@ -75,7 +87,7 @@ export default function HomePage() {
         ) : (
           <select
             value={selectedGroupId}
-            onChange={(e) => setSelectedGroupId(e.target.value)}
+            onChange={(e) => handleGroupChange(e.target.value)}
             className="w-full p-3 border rounded-lg text-base sm:text-lg"
           >
             {groups.map((group) => (
@@ -89,14 +101,12 @@ export default function HomePage() {
 
       {selectedGroupId && group && user && (
         <>
+          {/* Reminder Alert Banner */}
+          <ReminderAlertBanner groupId={selectedGroupId} />
+
           {/* Group Spending Summary */}
           <div className="mb-4 sm:mb-6">
             <GroupSpendingSummary groupId={selectedGroupId} />
-          </div>
-
-          {/* Recurring Reminders */}
-          <div className="mb-4 sm:mb-6">
-            <RecurringReminderManager groupId={selectedGroupId} />
           </div>
 
           {/* Unified Multimodal Chat Interface */}
@@ -107,6 +117,24 @@ export default function HomePage() {
               userName={user.name}
             />
           </div>
+
+          {/* Floating Calendar Button */}
+          <button
+            onClick={() => setIsCalendarOpen(true)}
+            className="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-110 flex items-center justify-center z-40"
+            aria-label="Open calendar"
+          >
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </button>
+
+          {/* Calendar Modal */}
+          <CalendarModal
+            groupId={selectedGroupId}
+            isOpen={isCalendarOpen}
+            onClose={() => setIsCalendarOpen(false)}
+          />
         </>
       )}
     </div>

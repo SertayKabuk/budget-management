@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider, useTranslation } from './contexts/LanguageContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
+import ReminderNotificationBadge from './components/ReminderNotificationBadge';
 import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
 import GroupPage from './pages/GroupPage';
@@ -20,6 +21,31 @@ function AppContent() {
   const { user, logout, isAuthenticated, isAdmin } = useAuth();
   const { t } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+
+  // Listen for group selection changes from localStorage
+  useEffect(() => {
+    const storedGroupId = localStorage.getItem('selectedGroupId');
+    if (storedGroupId) {
+      setSelectedGroupId(storedGroupId);
+    }
+
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      const newGroupId = localStorage.getItem('selectedGroupId');
+      setSelectedGroupId(newGroupId);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Custom event for same-tab updates
+    window.addEventListener('groupSelectionChanged', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('groupSelectionChanged', handleStorageChange);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -59,6 +85,9 @@ function AppContent() {
             
             {isAuthenticated && (
               <div className="flex items-center gap-2 sm:gap-4">
+                {/* Reminder Notification Badge */}
+                <ReminderNotificationBadge groupId={selectedGroupId} />
+                
                 {/* Desktop User Info */}
                 <div className="hidden sm:flex items-center gap-3">
                   {user?.picture ? (
