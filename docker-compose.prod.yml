@@ -17,7 +17,7 @@ services:
       - "traefik.http.middlewares.budget-backend-cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS,PATCH"
       - "traefik.http.middlewares.budget-backend-cors.headers.accesscontrolalloworiginlist=https://budget.sertay.com"
       - "traefik.http.middlewares.budget-backend-cors.headers.accesscontrolallowcredentials=true"
-      - "traefik.http.middlewares.budget-backend-cors.headers.accesscontrolallowheaders=*"
+      - "traefik.http.middlewares.budget-backend-cors.headers.accesscontrolallowheaders=Authorization,Content-Type,Accept,Origin,X-Requested-With"
       - "traefik.http.routers.budget-backend.middlewares=budget-backend-cors"
     image: ghcr.io/sertaykabuk/budget-management/backend:latest
     environment:

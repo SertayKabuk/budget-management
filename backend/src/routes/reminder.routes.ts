@@ -19,17 +19,19 @@ router.get('/', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    // If groupId is specified, verify user is a member of that group
+    // If groupId is specified, verify user is a member of that group unless global admin
     if (groupId) {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: groupId as string,
-          userId: userId
-        }
-      });
+      if (req.jwtUser?.role !== 'admin') {
+        const groupMembership = await prisma.groupMember.findFirst({
+          where: {
+            groupId: groupId as string,
+            userId: userId
+          }
+        });
 
-      if (!groupMembership) {
-        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+        if (!groupMembership) {
+          return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+        }
       }
 
       const reminders = await prisma.recurringReminder.findMany({
@@ -94,16 +96,18 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Reminder not found' });
     }
 
-    // Verify user is a member of the group this reminder belongs to
-    const groupMembership = await prisma.groupMember.findFirst({
-      where: {
-        groupId: reminder.groupId,
-        userId: userId
-      }
-    });
+    // Verify user is a member of the group this reminder belongs to unless global admin
+    if (req.jwtUser?.role !== 'admin') {
+      const groupMembership = await prisma.groupMember.findFirst({
+        where: {
+          groupId: reminder.groupId,
+          userId: userId
+        }
+      });
 
-    if (!groupMembership) {
-      return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      if (!groupMembership) {
+        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      }
     }
 
     res.json(convertDecimalsToNumbers(reminder));
@@ -151,16 +155,18 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'nextDueDate must be in the future' });
     }
 
-    // Verify authenticated user is a member of the group
-    const groupMembership = await prisma.groupMember.findFirst({
-      where: {
-        groupId: groupId,
-        userId: authenticatedUserId
-      }
-    });
+    // Verify authenticated user is a member of the group unless global admin
+    if (req.jwtUser?.role !== 'admin') {
+      const groupMembership = await prisma.groupMember.findFirst({
+        where: {
+          groupId: groupId,
+          userId: authenticatedUserId
+        }
+      });
 
-    if (!groupMembership) {
-      return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      if (!groupMembership) {
+        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      }
     }
 
     // Verify user is group admin or global admin
@@ -220,16 +226,18 @@ router.put('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Reminder not found' });
     }
 
-    // Verify user is a member of the group
-    const groupMembership = await prisma.groupMember.findFirst({
-      where: {
-        groupId: existingReminder.groupId,
-        userId: userId
-      }
-    });
+    // Verify user is a member of the group unless global admin
+    if (req.jwtUser?.role !== 'admin') {
+      const groupMembership = await prisma.groupMember.findFirst({
+        where: {
+          groupId: existingReminder.groupId,
+          userId: userId
+        }
+      });
 
-    if (!groupMembership) {
-      return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      if (!groupMembership) {
+        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      }
     }
 
     // Verify user is group admin or global admin
@@ -316,16 +324,18 @@ router.patch('/:id/toggle', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Reminder not found' });
     }
 
-    // Verify user is a member of the group
-    const groupMembership = await prisma.groupMember.findFirst({
-      where: {
-        groupId: existingReminder.groupId,
-        userId: userId
-      }
-    });
+    // Verify user is a member of the group unless global admin
+    if (req.jwtUser?.role !== 'admin') {
+      const groupMembership = await prisma.groupMember.findFirst({
+        where: {
+          groupId: existingReminder.groupId,
+          userId: userId
+        }
+      });
 
-    if (!groupMembership) {
-      return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      if (!groupMembership) {
+        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      }
     }
 
     // Verify user is group admin or global admin
@@ -378,16 +388,18 @@ router.delete('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Reminder not found' });
     }
 
-    // Verify user is a member of the group
-    const groupMembership = await prisma.groupMember.findFirst({
-      where: {
-        groupId: existingReminder.groupId,
-        userId: userId
-      }
-    });
+    // Verify user is a member of the group unless global admin
+    if (req.jwtUser?.role !== 'admin') {
+      const groupMembership = await prisma.groupMember.findFirst({
+        where: {
+          groupId: existingReminder.groupId,
+          userId: userId
+        }
+      });
 
-    if (!groupMembership) {
-      return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      if (!groupMembership) {
+        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
+      }
     }
 
     // Verify user is group admin or global admin
