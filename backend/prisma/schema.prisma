@@ -58,6 +58,7 @@ model GroupMember {
   @@index([userId])
   @@index([groupId])
   @@index([userId, role])
+  @@index([groupId, role]) // Optimize group admin lookups
 }
 
 model Expense {
@@ -79,6 +80,9 @@ model Expense {
   @@index([groupId, date])
   @@index([userId])
   @@index([category])
+  @@index([imageUrl]) // Optimize image serving lookups
+  @@index([groupId, userId]) // Optimize user's expenses in group queries
+  @@index([groupId, category]) // Optimize category filtering per group
 }
 
 model AuditLog {

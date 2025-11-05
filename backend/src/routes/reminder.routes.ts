@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../prisma';
 import { authenticateToken, isGroupAdminOrGlobalAdmin } from '../middleware/auth.middleware';
+import { checkGroupMembership } from '../middleware/groupMembership.middleware';
 import { ReminderFrequency } from '@prisma/client';
 import { convertDecimalsToNumbers } from '../utils/decimalUtils';
 
@@ -22,14 +23,9 @@ router.get('/', async (req: Request, res: Response) => {
     // If groupId is specified, verify user is a member of that group unless global admin
     if (groupId) {
       if (req.jwtUser?.role !== 'admin') {
-        const groupMembership = await prisma.groupMember.findFirst({
-          where: {
-            groupId: groupId as string,
-            userId: userId
-          }
-        });
+        const membership = await checkGroupMembership(userId, groupId as string, req);
 
-        if (!groupMembership) {
+        if (!membership || !membership.isMember) {
           return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
         }
       }
@@ -98,14 +94,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     // Verify user is a member of the group this reminder belongs to unless global admin
     if (req.jwtUser?.role !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: reminder.groupId,
-          userId: userId
-        }
-      });
+      const membership = await checkGroupMembership(userId, reminder.groupId, req);
 
-      if (!groupMembership) {
+      if (!membership || !membership.isMember) {
         return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
       }
     }
@@ -157,14 +148,9 @@ router.post('/', async (req: Request, res: Response) => {
 
     // Verify authenticated user is a member of the group unless global admin
     if (req.jwtUser?.role !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: groupId,
-          userId: authenticatedUserId
-        }
-      });
+      const membership = await checkGroupMembership(authenticatedUserId, groupId, req);
 
-      if (!groupMembership) {
+      if (!membership || !membership.isMember) {
         return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
       }
     }
@@ -228,14 +214,9 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     // Verify user is a member of the group unless global admin
     if (req.jwtUser?.role !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: existingReminder.groupId,
-          userId: userId
-        }
-      });
+      const membership = await checkGroupMembership(userId, existingReminder.groupId, req);
 
-      if (!groupMembership) {
+      if (!membership || !membership.isMember) {
         return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
       }
     }
@@ -326,14 +307,9 @@ router.patch('/:id/toggle', async (req: Request, res: Response) => {
 
     // Verify user is a member of the group unless global admin
     if (req.jwtUser?.role !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: existingReminder.groupId,
-          userId: userId
-        }
-      });
+      const membership = await checkGroupMembership(userId, existingReminder.groupId, req);
 
-      if (!groupMembership) {
+      if (!membership || !membership.isMember) {
         return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
       }
     }
@@ -390,14 +366,9 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     // Verify user is a member of the group unless global admin
     if (req.jwtUser?.role !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: existingReminder.groupId,
-          userId: userId
-        }
-      });
+      const membership = await checkGroupMembership(userId, existingReminder.groupId, req);
 
-      if (!groupMembership) {
+      if (!membership || !membership.isMember) {
         return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
       }
     }
