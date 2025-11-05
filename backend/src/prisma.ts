@@ -82,13 +82,19 @@ const extendedPrisma = basePrisma.$extends({
         return result;
       },
       async updateWithAudit(args: any) {
-        const oldValues = await basePrisma.user.findUnique({ where: args.where });
+        // Optimize: fetch old values only if audit context exists
+        const oldValues = currentAuditContext.userId 
+          ? await basePrisma.user.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.user.update(args);
         await createAuditLog('User', result.id, 'UPDATE', oldValues, result);
         return result;
       },
       async deleteWithAudit(args: any) {
-        const oldValues = await basePrisma.user.findUnique({ where: args.where });
+        // Optimize: fetch old values only if audit context exists
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.user.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.user.delete(args);
         await createAuditLog('User', result.id, 'DELETE', oldValues, null);
         return result;
@@ -101,13 +107,17 @@ const extendedPrisma = basePrisma.$extends({
         return result;
       },
       async updateWithAudit(args: any) {
-        const oldValues = await basePrisma.group.findUnique({ where: args.where });
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.group.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.group.update(args);
         await createAuditLog('Group', result.id, 'UPDATE', oldValues, result);
         return result;
       },
       async deleteWithAudit(args: any) {
-        const oldValues = await basePrisma.group.findUnique({ where: args.where });
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.group.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.group.delete(args);
         await createAuditLog('Group', result.id, 'DELETE', oldValues, null);
         return result;
@@ -120,13 +130,17 @@ const extendedPrisma = basePrisma.$extends({
         return result;
       },
       async updateWithAudit(args: any) {
-        const oldValues = await basePrisma.groupMember.findUnique({ where: args.where });
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.groupMember.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.groupMember.update(args);
         await createAuditLog('GroupMember', result.id, 'UPDATE', oldValues, result);
         return result;
       },
       async deleteWithAudit(args: any) {
-        const oldValues = await basePrisma.groupMember.findUnique({ where: args.where });
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.groupMember.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.groupMember.delete(args);
         await createAuditLog('GroupMember', result.id, 'DELETE', oldValues, null);
         return result;
@@ -139,13 +153,17 @@ const extendedPrisma = basePrisma.$extends({
         return result;
       },
       async updateWithAudit(args: any) {
-        const oldValues = await basePrisma.expense.findUnique({ where: args.where });
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.expense.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.expense.update(args);
         await createAuditLog('Expense', result.id, 'UPDATE', oldValues, result);
         return result;
       },
       async deleteWithAudit(args: any) {
-        const oldValues = await basePrisma.expense.findUnique({ where: args.where });
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.expense.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.expense.delete(args);
         await createAuditLog('Expense', result.id, 'DELETE', oldValues, null);
         return result;
@@ -158,13 +176,17 @@ const extendedPrisma = basePrisma.$extends({
         return result;
       },
       async updateWithAudit(args: any) {
-        const oldValues = await basePrisma.payment.findUnique({ where: args.where });
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.payment.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.payment.update(args);
         await createAuditLog('Payment', result.id, 'UPDATE', oldValues, result);
         return result;
       },
       async deleteWithAudit(args: any) {
-        const oldValues = await basePrisma.payment.findUnique({ where: args.where });
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.payment.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.payment.delete(args);
         await createAuditLog('Payment', result.id, 'DELETE', oldValues, null);
         return result;
@@ -177,13 +199,17 @@ const extendedPrisma = basePrisma.$extends({
         return result;
       },
       async updateWithAudit(args: any) {
-        const oldValues = await basePrisma.recurringReminder.findUnique({ where: args.where });
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.recurringReminder.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.recurringReminder.update(args);
         await createAuditLog('RecurringReminder', result.id, 'UPDATE', oldValues, result);
         return result;
       },
       async deleteWithAudit(args: any) {
-        const oldValues = await basePrisma.recurringReminder.findUnique({ where: args.where });
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.recurringReminder.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.recurringReminder.delete(args);
         await createAuditLog('RecurringReminder', result.id, 'DELETE', oldValues, null);
         return result;
@@ -196,13 +222,17 @@ const extendedPrisma = basePrisma.$extends({
         return result;
       },
       async updateWithAudit(args: any) {
-        const oldValues = await basePrisma.groupInvite.findUnique({ where: args.where });
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.groupInvite.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.groupInvite.update(args);
         await createAuditLog('GroupInvite', result.id, 'UPDATE', oldValues, result);
         return result;
       },
       async deleteWithAudit(args: any) {
-        const oldValues = await basePrisma.groupInvite.findUnique({ where: args.where });
+        const oldValues = currentAuditContext.userId
+          ? await basePrisma.groupInvite.findUnique({ where: args.where })
+          : null;
         const result = await basePrisma.groupInvite.delete(args);
         await createAuditLog('GroupInvite', result.id, 'DELETE', oldValues, null);
         return result;

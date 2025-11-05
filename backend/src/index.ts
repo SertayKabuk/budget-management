@@ -16,6 +16,7 @@ import reminderRoutes from './routes/reminder.routes';
 import inviteRoutes from './routes/invite.routes';
 import { setupWebSocket } from './websocket/socket';
 import { authenticateToken, clearAuditContextMiddleware } from './middleware/auth.middleware';
+import { initGroupMembershipCache } from './middleware/groupMembership.middleware';
 
 dotenv.config();
 
@@ -44,6 +45,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
+// Initialize group membership cache for each request (performance optimization)
+app.use(initGroupMembershipCache);
 // Clear audit context after each request
 app.use(clearAuditContextMiddleware);
 // Protect uploads directory with authentication

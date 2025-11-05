@@ -109,10 +109,12 @@ router.get('/:id/summary', async (req: Request, res: Response) => {
 
     // Admin users can access any group summary, regular users must be members
     if (userRole !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
+      const groupMembership = await prisma.groupMember.findUnique({
         where: {
-          groupId: id,
-          userId: userId
+          userId_groupId: {
+            userId,
+            groupId: id
+          }
         }
       });
 
@@ -121,35 +123,50 @@ router.get('/:id/summary', async (req: Request, res: Response) => {
       }
     }
     
-    const expenses = await prisma.expense.findMany({
-      where: { groupId: id },
-      include: {
-        user: { select: { id: true, name: true, email: true } }
-      }
+    // Optimized: Use database aggregation instead of fetching all data
+    const [totalResult, spendingByUser, expenseCount] = await Promise.all([
+      // Get total spending using aggregation
+      prisma.expense.aggregate({
+        where: { groupId: id },
+        _sum: { amount: true }
+      }),
+      // Get spending per user with aggregation
+      prisma.expense.groupBy({
+        by: ['userId'],
+        where: { groupId: id },
+        _sum: { amount: true },
+        _count: true
+      }),
+      // Get total count
+      prisma.expense.count({
+        where: { groupId: id }
+      })
+    ]);
+
+    // Fetch user details for the spending summary
+    const userIds = spendingByUser.map(item => item.userId);
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true, email: true }
     });
 
-    // Convert Decimal amounts to numbers for proper calculation
-    const expensesWithNumbers = convertDecimalsToNumbers(expenses);
-    
-    const totalSpending = expensesWithNumbers.reduce((sum: number, exp: any) => sum + exp.amount, 0);
-    
-    const spendingByUser = expensesWithNumbers.reduce((acc: Record<string, any>, exp: any) => {
-      if (!acc[exp.userId]) {
-        acc[exp.userId] = {
-          user: exp.user,
-          total: 0,
-          count: 0
-        };
-      }
-      acc[exp.userId].total += exp.amount;
-      acc[exp.userId].count += 1;
-      return acc;
-    }, {} as Record<string, any>);
+    const userMap = new Map(users.map(u => [u.id, u]));
+
+    // Convert Decimal to number for JSON serialization
+    const totalSpending = totalResult._sum.amount 
+      ? parseFloat(totalResult._sum.amount.toString())
+      : 0;
+
+    const spendingByUserFormatted = spendingByUser.map(item => ({
+      user: userMap.get(item.userId),
+      total: item._sum.amount ? parseFloat(item._sum.amount.toString()) : 0,
+      count: item._count
+    }));
 
     res.json({
       totalSpending,
-      expenseCount: expensesWithNumbers.length,
-      spendingByUser: Object.values(spendingByUser)
+      expenseCount,
+      spendingByUser: spendingByUserFormatted
     });
   } catch (error) {
     console.error('Error fetching group summary:', error);

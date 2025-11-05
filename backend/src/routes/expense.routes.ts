@@ -20,26 +20,28 @@ router.get('/image/:filename', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    // Find expense by image (regardless of membership) first
+    // Optimized: Use a single query with include to fetch expense and group membership
     const expense = await prisma.expense.findFirst({
-      where: { imageUrl: `/uploads/${filename}` }
+      where: { 
+        imageUrl: `/uploads/${filename}`,
+        // If not global admin, verify membership
+        ...(req.jwtUser?.role !== 'admin' && {
+          group: {
+            members: {
+              some: {
+                userId: userId
+              }
+            }
+          }
+        })
+      },
+      select: {
+        groupId: true
+      }
     });
 
     if (!expense) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    // If not global admin, verify membership in the expense's group
-    if (req.jwtUser?.role !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: expense.groupId,
-          userId: userId
-        }
-      });
-      if (!groupMembership) {
-        return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
-      }
+      return res.status(404).json({ error: 'Image not found or access denied' });
     }
 
     // Serve the file

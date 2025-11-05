@@ -99,14 +99,21 @@ export const clearAuditContextMiddleware = (req: Request, res: Response, next: N
  */
 export async function isGroupAdmin(userId: string, groupId: string): Promise<boolean> {
   const prisma = (await import('../prisma')).default;
-  const groupMember = await prisma.groupMember.findFirst({
+  
+  // Optimized: use findUnique with composite unique constraint instead of findFirst
+  const groupMember = await prisma.groupMember.findUnique({
     where: {
-      userId,
-      groupId,
-      role: 'admin'
+      userId_groupId: {
+        userId,
+        groupId
+      }
+    },
+    select: {
+      role: true
     }
   });
-  return !!groupMember;
+  
+  return groupMember?.role === 'admin';
 }
 
 /**
