@@ -17,7 +17,7 @@ export default function HomePage() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  const { data: groups } = useQuery({
+  const { data: groups, refetch: refetchGroups } = useQuery({
     queryKey: ['groups'],
     queryFn: async () => {
       const response = await groupApi.getAll();
@@ -43,13 +43,13 @@ export default function HomePage() {
 
     try {
       const response = await groupApi.create({ name, description });
+      e.currentTarget.reset();
       setShowCreateGroup(false);
       setSelectedGroupId(response.data.id);
       localStorage.setItem('selectedGroupId', response.data.id);
       window.dispatchEvent(new Event('groupSelectionChanged'));
-      e.currentTarget.reset();
       // Refetch groups to update the list
-      window.location.reload(); // Simple way to refresh groups query
+      await refetchGroups();
     } catch (error) {
       console.error('Error creating group:', error);
       alert('Failed to create group. Please try again.');
