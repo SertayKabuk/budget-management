@@ -37,13 +37,16 @@ export default function HomePage() {
   const handleCreateGroup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsCreating(true);
-    const formData = new FormData(e.currentTarget);
+    
+    // Store form reference before async operations (e.currentTarget becomes null after await)
+    const form = e.currentTarget;
+    const formData = new FormData(form);
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
 
     try {
       const response = await groupApi.create({ name, description });
-      e.currentTarget.reset();
+      form.reset();
       setShowCreateGroup(false);
       setSelectedGroupId(response.data.id);
       localStorage.setItem('selectedGroupId', response.data.id);
