@@ -49,11 +49,13 @@ export async function checkGroupMembership(
     return req.groupMembershipCache[cacheKey];
   }
 
-  // Query database
-  const membership = await prisma.groupMember.findFirst({
+  // Query database with optimized findUnique using composite key
+  const membership = await prisma.groupMember.findUnique({
     where: {
-      userId,
-      groupId,
+      userId_groupId: {
+        userId,
+        groupId
+      }
     },
     select: {
       role: true,

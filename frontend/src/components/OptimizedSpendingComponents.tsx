@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { formatCurrency } from '../utils/currency';
 import type { Expense } from '../types';
 import AuthenticatedImage from './AuthenticatedImage';
