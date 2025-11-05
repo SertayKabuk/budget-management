@@ -49,30 +49,63 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
   const { data: allExpenses, isLoading } = useQuery({
     queryKey: ['expenses', groupId],
     queryFn: async () => {
-      const response = await expenseApi.getAll(groupId);
-      return response.data;
+      try {
+        const response = await expenseApi.getAll(groupId);
+        return response.data;
+      } catch (error: any) {
+        if (error?.response?.status === 403) {
+          return [];
+        }
+        throw error;
+      }
     },
     enabled: !!groupId,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 403) return false;
+      return failureCount < 2;
+    },
   });
 
   // Fetch all group members for fair share calculation
   const { data: groupMembers } = useQuery({
     queryKey: ['groupMembers', groupId],
     queryFn: async () => {
-      const response = await groupApi.getMembers(groupId);
-      return response.data;
+      try {
+        const response = await groupApi.getMembers(groupId);
+        return response.data;
+      } catch (error: any) {
+        if (error?.response?.status === 403) {
+          return [];
+        }
+        throw error;
+      }
     },
     enabled: !!groupId,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 403) return false;
+      return failureCount < 2;
+    },
   });
 
   // Fetch payments to adjust debt calculations
   const { data: payments } = useQuery({
     queryKey: ['payments', groupId],
     queryFn: async () => {
-      const response = await paymentApi.getAll(groupId);
-      return response.data;
+      try {
+        const response = await paymentApi.getAll(groupId);
+        return response.data;
+      } catch (error: any) {
+        if (error?.response?.status === 403) {
+          return [];
+        }
+        throw error;
+      }
     },
     enabled: !!groupId,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 403) return false;
+      return failureCount < 2;
+    },
   });
 
   // Filter expenses based on selected time period

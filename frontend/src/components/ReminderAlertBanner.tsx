@@ -16,10 +16,25 @@ export default function ReminderAlertBanner({ groupId }: ReminderAlertBannerProp
   const { data: reminders = [] } = useQuery({
     queryKey: ['reminders', groupId],
     queryFn: async () => {
-      const response = await reminderApi.getAll(groupId);
-      return response.data;
+      try {
+        const response = await reminderApi.getAll(groupId);
+        return response.data;
+      } catch (error: any) {
+        // Silently handle 403 errors (user not yet recognized as member)
+        if (error?.response?.status === 403) {
+          return [];
+        }
+        throw error;
+      }
     },
     enabled: !!groupId,
+    retry: (failureCount, error: any) => {
+      // Don't retry on 403 errors
+      if (error?.response?.status === 403) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 
   const getDaysUntilDue = (dueDate: string): number => {
