@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../prisma';
 import { authenticateToken, isPaymentParticipantOrAdmin } from '../middleware/auth.middleware';
+import { checkGroupMembership } from '../middleware/groupMembership.middleware';
 import { PaymentStatus } from '@prisma/client';
 import { convertDecimalsToNumbers } from '../utils/decimalUtils';
 
@@ -22,14 +23,9 @@ router.get('/', async (req: Request, res: Response) => {
     // If groupId is specified, verify user is a member of that group unless global admin
     if (groupId) {
       if (req.jwtUser?.role !== 'admin') {
-        const groupMembership = await prisma.groupMember.findFirst({
-          where: {
-            groupId: groupId as string,
-            userId: userId
-          }
-        });
+        const membership = await checkGroupMembership(userId, groupId as string, req);
 
-        if (!groupMembership) {
+        if (!membership || !membership.isMember) {
           return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
         }
       }
@@ -101,14 +97,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     // Verify user is a member of the group this payment belongs to unless global admin
     if (req.jwtUser?.role !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: payment.groupId,
-          userId: userId
-        }
-      });
+      const membership = await checkGroupMembership(userId, payment.groupId, req);
 
-      if (!groupMembership) {
+      if (!membership || !membership.isMember) {
         return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
       }
     }
@@ -149,32 +140,22 @@ router.post('/', async (req: Request, res: Response) => {
 
     // Verify authenticated user is a member of the group unless global admin
     if (req.jwtUser?.role !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: groupId,
-          userId: authenticatedUserId
-        }
-      });
+      const membership = await checkGroupMembership(authenticatedUserId, groupId, req);
 
-      if (!groupMembership) {
+      if (!membership || !membership.isMember) {
         return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
       }
     }
 
     // Verify both users exist and are group members
-    const fromUserMembership = await prisma.groupMember.findFirst({
-      where: { groupId, userId: fromUserId }
-    });
+    const fromUserMembership = await checkGroupMembership(fromUserId, groupId, req);
+    const toUserMembership = await checkGroupMembership(toUserId, groupId, req);
 
-    const toUserMembership = await prisma.groupMember.findFirst({
-      where: { groupId, userId: toUserId }
-    });
-
-    if (!fromUserMembership) {
+    if (!fromUserMembership || !fromUserMembership.isMember) {
       return res.status(400).json({ error: 'fromUser is not a member of this group' });
     }
 
-    if (!toUserMembership) {
+    if (!toUserMembership || !toUserMembership.isMember) {
       return res.status(400).json({ error: 'toUser is not a member of this group' });
     }
 
@@ -223,14 +204,9 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     // Verify user is a member of the group unless global admin
     if (req.jwtUser?.role !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: existingPayment.groupId,
-          userId: userId
-        }
-      });
+      const membership = await checkGroupMembership(userId, existingPayment.groupId, req);
 
-      if (!groupMembership) {
+      if (!membership || !membership.isMember) {
         return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
       }
     }
@@ -270,19 +246,15 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     // If updating users, verify they are group members
     if (fromUserId) {
-      const fromUserMembership = await prisma.groupMember.findFirst({
-        where: { groupId: existingPayment.groupId, userId: fromUserId }
-      });
-      if (!fromUserMembership) {
+      const fromUserMembership = await checkGroupMembership(fromUserId, existingPayment.groupId, req);
+      if (!fromUserMembership || !fromUserMembership.isMember) {
         return res.status(400).json({ error: 'fromUser is not a member of this group' });
       }
     }
 
     if (toUserId) {
-      const toUserMembership = await prisma.groupMember.findFirst({
-        where: { groupId: existingPayment.groupId, userId: toUserId }
-      });
-      if (!toUserMembership) {
+      const toUserMembership = await checkGroupMembership(toUserId, existingPayment.groupId, req);
+      if (!toUserMembership || !toUserMembership.isMember) {
         return res.status(400).json({ error: 'toUser is not a member of this group' });
       }
     }
@@ -338,14 +310,9 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     // Verify user is a member of the group unless global admin
     if (req.jwtUser?.role !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: existingPayment.groupId,
-          userId: userId
-        }
-      });
+      const membership = await checkGroupMembership(userId, existingPayment.groupId, req);
 
-      if (!groupMembership) {
+      if (!membership || !membership.isMember) {
         return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
       }
     }

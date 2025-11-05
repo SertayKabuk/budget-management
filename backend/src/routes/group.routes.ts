@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../prisma';
 import { authenticateToken, isGroupAdminOrGlobalAdmin } from '../middleware/auth.middleware';
+import { checkGroupMembership } from '../middleware/groupMembership.middleware';
 import { convertDecimalsToNumbers } from '../utils/decimalUtils';
 
 const router = Router();
@@ -57,14 +58,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     // Admin users can access any group, regular users must be members
     if (userRole !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: id,
-          userId: userId
-        }
-      });
+      const membership = await checkGroupMembership(userId, id, req);
 
-      if (!groupMembership) {
+      if (!membership || !membership.isMember) {
         return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
       }
     }
@@ -322,14 +318,9 @@ router.get('/:id/members', async (req: Request, res: Response) => {
 
     // Admin users can access any group, regular users must be members
     if (userRole !== 'admin') {
-      const groupMembership = await prisma.groupMember.findFirst({
-        where: {
-          groupId: id,
-          userId: userId
-        }
-      });
+      const membership = await checkGroupMembership(userId, id, req);
 
-      if (!groupMembership) {
+      if (!membership || !membership.isMember) {
         return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
       }
     }

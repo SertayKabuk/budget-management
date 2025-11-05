@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
+import { checkGroupMembership } from '../middleware/groupMembership.middleware';
 import prisma from '../prisma';
 import { InviteStatus } from '@prisma/client';
 
@@ -13,16 +14,9 @@ router.post('/groups/:groupId/invites', authenticateToken, async (req, res) => {
     const userId = req.jwtUser!.id;
 
     // Check if user is a member of the group
-    const membership = await prisma.groupMember.findUnique({
-      where: {
-        userId_groupId: {
-          userId,
-          groupId,
-        },
-      },
-    });
+    const membership = await checkGroupMembership(userId, groupId, req);
 
-    if (!membership) {
+    if (!membership || !membership.isMember) {
       return res.status(403).json({ error: 'You must be a member of the group to create invites' });
     }
 
@@ -121,15 +115,8 @@ router.get('/invites/:code', optionalAuth, async (req, res) => {
     // Check if user is already a member (if authenticated)
     let alreadyMember = false;
     if (req.jwtUser) {
-      const membership = await prisma.groupMember.findUnique({
-        where: {
-          userId_groupId: {
-            userId: req.jwtUser.id,
-            groupId: invite.groupId,
-          },
-        },
-      });
-      alreadyMember = !!membership;
+      const membership = await checkGroupMembership(req.jwtUser.id, invite.groupId, req);
+      alreadyMember = membership ? membership.isMember : false;
     }
 
     res.json({
@@ -184,16 +171,9 @@ router.post('/invites/:code/accept', authenticateToken, async (req, res) => {
     }
 
     // Check if user is already a member
-    const existingMembership = await prisma.groupMember.findUnique({
-      where: {
-        userId_groupId: {
-          userId,
-          groupId: invite.groupId,
-        },
-      },
-    });
+    const existingMembership = await checkGroupMembership(userId, invite.groupId, req);
 
-    if (existingMembership) {
+    if (existingMembership && existingMembership.isMember) {
       return res.status(400).json({ error: 'You are already a member of this group' });
     }
 
@@ -245,16 +225,9 @@ router.get('/groups/:groupId/invites', authenticateToken, async (req, res) => {
     const userId = req.jwtUser!.id;
 
     // Check if user is a member of the group
-    const membership = await prisma.groupMember.findUnique({
-      where: {
-        userId_groupId: {
-          userId,
-          groupId,
-        },
-      },
-    });
+    const membership = await checkGroupMembership(userId, groupId, req);
 
-    if (!membership) {
+    if (!membership || !membership.isMember) {
       return res.status(403).json({ error: 'You must be a member of the group to view invites' });
     }
 
@@ -296,17 +269,10 @@ router.delete('/invites/:code', authenticateToken, async (req, res) => {
     }
 
     // Check permissions: must be invite creator, group admin, or global admin
-    const membership = await prisma.groupMember.findUnique({
-      where: {
-        userId_groupId: {
-          userId,
-          groupId: invite.groupId,
-        },
-      },
-    });
+    const membership = await checkGroupMembership(userId, invite.groupId, req);
 
     const isInviteCreator = invite.invitedById === userId;
-    const isGroupAdmin = membership?.role === 'admin';
+    const isGroupAdmin = membership ? membership.isAdmin : false;
     const isGlobalAdmin = userRole === 'admin';
 
     if (!isInviteCreator && !isGroupAdmin && !isGlobalAdmin) {
