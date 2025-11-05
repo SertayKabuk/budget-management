@@ -14,6 +14,8 @@ export default function HomePage() {
   const { t } = useTranslation();
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   const { data: groups } = useQuery({
     queryKey: ['groups'],
@@ -31,6 +33,30 @@ export default function HomePage() {
     },
     enabled: !!selectedGroupId,
   });
+
+  const handleCreateGroup = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsCreating(true);
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+
+    try {
+      const response = await groupApi.create({ name, description });
+      setShowCreateGroup(false);
+      setSelectedGroupId(response.data.id);
+      localStorage.setItem('selectedGroupId', response.data.id);
+      window.dispatchEvent(new Event('groupSelectionChanged'));
+      e.currentTarget.reset();
+      // Refetch groups to update the list
+      window.location.reload(); // Simple way to refresh groups query
+    } catch (error) {
+      console.error('Error creating group:', error);
+      alert('Failed to create group. Please try again.');
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   // Auto-select first group if available
   useEffect(() => {
@@ -80,22 +106,125 @@ export default function HomePage() {
           {t.home.selectGroup}
         </label>
         {!groups || groups.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <p className="mb-2">{t.home.noGroups}</p>
-            <p className="text-sm">{t.home.noGroupsContact}</p>
+          <div className="text-center py-8">
+            {!showCreateGroup ? (
+              <>
+                <div className="text-gray-500 mb-4">
+                  <p className="mb-2 text-base sm:text-lg font-medium">{t.home.noGroups}</p>
+                  <p className="text-sm">{t.home.noGroupsContact}</p>
+                </div>
+                <button
+                  onClick={() => setShowCreateGroup(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                >
+                  {t.home.createFirstGroup}
+                </button>
+              </>
+            ) : (
+              <form onSubmit={handleCreateGroup} className="max-w-md mx-auto text-left">
+                <h3 className="text-lg font-semibold mb-4 text-gray-900">{t.home.createNewGroupTitle}</h3>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.home.groupNameRequired}
+                  </label>
+                  <input
+                    name="name"
+                    type="text"
+                    placeholder={t.home.groupNamePlaceholder}
+                    required
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.home.descriptionLabel}
+                  </label>
+                  <textarea
+                    name="description"
+                    placeholder={t.home.descriptionPlaceholder}
+                    rows={3}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={isCreating}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    {isCreating ? t.home.creatingButton : t.home.createButton}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateGroup(false)}
+                    disabled={isCreating}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    {t.home.cancelButton}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         ) : (
-          <select
-            value={selectedGroupId}
-            onChange={(e) => handleGroupChange(e.target.value)}
-            className="w-full p-3 border rounded-lg text-base sm:text-lg"
-          >
-            {groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </select>
+          <>
+            <select
+              value={selectedGroupId}
+              onChange={(e) => handleGroupChange(e.target.value)}
+              className="w-full p-3 border rounded-lg text-base sm:text-lg mb-3"
+            >
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setShowCreateGroup(true)}
+              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+            >
+              {t.home.createAnotherGroup}
+            </button>
+            {showCreateGroup && (
+              <form onSubmit={handleCreateGroup} className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-base font-semibold mb-3 text-gray-900">{t.home.createNewGroupTitle}</h3>
+                <div className="mb-3">
+                  <input
+                    name="name"
+                    type="text"
+                    placeholder={t.home.groupNamePlaceholder}
+                    required
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div className="mb-3">
+                  <textarea
+                    name="description"
+                    placeholder={t.home.descriptionPlaceholder}
+                    rows={2}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={isCreating}
+                    className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                  >
+                    {isCreating ? t.home.creatingButton : t.home.createButton}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateGroup(false)}
+                    disabled={isCreating}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+                  >
+                    {t.home.cancelButton}
+                  </button>
+                </div>
+              </form>
+            )}
+          </>
         )}
       </div>
 
