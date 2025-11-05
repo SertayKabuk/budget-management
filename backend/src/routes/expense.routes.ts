@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../prisma';
 import { authenticateToken, isExpenseOwnerOrAdmin } from '../middleware/auth.middleware';
+import { checkGroupMembership } from '../middleware/groupMembership.middleware';
 import fs from 'fs';
 import path from 'path';
 import { convertDecimalsToNumbers } from '../utils/decimalUtils';
@@ -80,14 +81,10 @@ router.get('/', async (req: Request, res: Response) => {
     // If groupId is specified, verify user is a member of that group unless global admin
     if (groupId) {
       if (req.jwtUser?.role !== 'admin') {
-        const groupMembership = await prisma.groupMember.findFirst({
-          where: {
-            groupId: groupId as string,
-            userId: userId
-          }
-        });
+        // Use cached membership check instead of direct database query
+        const membership = await checkGroupMembership(userId, groupId as string, req);
 
-        if (!groupMembership) {
+        if (!membership || !membership.isMember) {
           return res.status(403).json({ error: 'Access denied: You are not a member of this group' });
         }
       }

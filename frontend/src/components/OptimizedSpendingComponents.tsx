@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { formatCurrency } from '../utils/currency';
 import type { Expense } from '../types';
+import type { TranslationKeys } from '../locales/tr';
 import AuthenticatedImage from './AuthenticatedImage';
 
 interface UserSpendingItemProps {
@@ -15,7 +16,7 @@ interface UserSpendingItemProps {
   onToggle: (userId: string) => void;
   userExpenses: Expense[];
   onImageClick: (imageUrl: string) => void;
-  t: any;
+  t: TranslationKeys;
 }
 
 // Memoized component to prevent unnecessary re-renders
