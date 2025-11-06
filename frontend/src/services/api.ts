@@ -60,6 +60,13 @@ export type { User, Group, Expense, AuditLog, GroupMember, Payment, PaymentStatu
 export const userApi = {
   getAll: () => api.get<User[]>('/users'),
   getById: (id: string) => api.get<User>(`/users/${id}`),
+  getPublicProfile: (id: string) => api.get<User & { 
+    sharedGroups?: { id: string; name: string }[];
+    isSharedMember?: boolean;
+  }>(`/users/${id}/public`),
+  getProfile: () => api.get<User>('/users/profile'),
+  updateProfile: (data: { name?: string; iban?: string; phone?: string; bio?: string }) =>
+    api.patch<User>('/users/profile', data),
   updateRole: (id: string, role: string) => 
     api.patch<User>(`/users/${id}/role`, { role }),
   // Manual user creation is disabled - users are created automatically via Google OAuth
@@ -149,7 +156,9 @@ export const paymentApi = {
 
 export const reminderApi = {
   getAll: (groupId?: string) =>
-    api.get<RecurringReminder[]>('/reminders', { params: { groupId } }),
+    api.get<RecurringReminder[]>('/reminders', { 
+      params: groupId ? { groupId } : {} 
+    }),
   getById: (id: string) => api.get<RecurringReminder>(`/reminders/${id}`),
   create: (data: {
     title: string;

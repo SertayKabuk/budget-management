@@ -14,8 +14,10 @@ interface DebtSettlementManagerProps {
 interface DebtSettlement {
   fromUserId: string;
   fromUserName: string;
+  fromUserIban?: string;
   toUserId: string;
   toUserName: string;
+  toUserIban?: string;
   amount: number;
 }
 
@@ -200,13 +202,17 @@ export default function DebtSettlementManager({ groupId }: DebtSettlementManager
   const settlements = useMemo((): DebtSettlement[] => {
     if (!expenses || expenses.length === 0 || !groupMembers || groupMembers.length === 0) return [];
 
-    // Get all group members and their spending
-    const usersMap = new Map<string, { name: string; spent: number }>();
+    // Get all group members and their spending + IBAN
+    const usersMap = new Map<string, { name: string; spent: number; iban?: string }>();
     
     // Initialize all group members with 0 spending
     groupMembers.forEach((member) => {
       if (member.user) {
-        usersMap.set(member.user.id, { name: member.user.name, spent: 0 });
+        usersMap.set(member.user.id, { 
+          name: member.user.name, 
+          spent: 0,
+          iban: member.user.iban 
+        });
       }
     });
 
@@ -221,6 +227,7 @@ export default function DebtSettlementManager({ groupId }: DebtSettlementManager
     const users = Array.from(usersMap.entries()).map(([id, data]) => ({
       userId: id,
       userName: data.name,
+      userIban: data.iban,
       spent: data.spent
     }));
 
@@ -234,6 +241,7 @@ export default function DebtSettlementManager({ groupId }: DebtSettlementManager
     const balances = users.map(u => ({
       userId: u.userId,
       userName: u.userName,
+      userIban: u.userIban,
       balance: u.spent - fairShare
     }));
 
@@ -275,8 +283,10 @@ export default function DebtSettlementManager({ groupId }: DebtSettlementManager
         settlementsList.push({
           fromUserId: debtor.userId,
           fromUserName: debtor.userName,
+          fromUserIban: debtor.userIban,
           toUserId: creditor.userId,
           toUserName: creditor.userName,
+          toUserIban: creditor.userIban,
           amount: amount
         });
       }
@@ -485,22 +495,56 @@ export default function DebtSettlementManager({ groupId }: DebtSettlementManager
                 key={index}
                 className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-indigo-100 hover:shadow-md transition-shadow"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex-1">
-                    <p className="text-sm sm:text-base font-medium text-gray-900">
-                      {settlement.fromUserName} → {settlement.toUserName}
-                    </p>
-                    <p className="text-lg sm:text-xl font-bold text-indigo-600 mt-1">
-                      {formatCurrency(settlement.amount)}
-                    </p>
+                <div className="flex flex-col gap-3">
+                  {/* Payment Info */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="flex-1">
+                      <p className="text-sm sm:text-base font-medium text-gray-900">
+                        {settlement.fromUserName} → {settlement.toUserName}
+                      </p>
+                      <p className="text-lg sm:text-xl font-bold text-indigo-600 mt-1">
+                        {formatCurrency(settlement.amount)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleCreatePayment(settlement)}
+                      disabled={createPaymentMutation.isPending}
+                      className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {createPaymentMutation.isPending ? t.common.loading : t.payments.settlements.createFromSuggestion}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleCreatePayment(settlement)}
-                    disabled={createPaymentMutation.isPending}
-                    className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {createPaymentMutation.isPending ? t.common.loading : t.payments.settlements.createFromSuggestion}
-                  </button>
+
+                  {/* IBAN Info */}
+                  {settlement.toUserIban && (
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-gray-600 mb-1">
+                            💳 {settlement.toUserName} IBAN
+                          </p>
+                          <p className="text-sm font-mono font-medium text-gray-900 break-all">
+                            {settlement.toUserIban}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(settlement.toUserIban!);
+                            alert('IBAN kopyalandı!');
+                          }}
+                          className="flex-shrink-0 px-3 py-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium whitespace-nowrap"
+                        >
+                          📋 Kopyala
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!settlement.toUserIban && (
+                    <p className="text-xs text-gray-500 italic">
+                      ℹ️ {settlement.toUserName} henüz IBAN bilgisi eklememiş
+                    </p>
+                  )}
                 </div>
               </div>
             ))}

@@ -5,24 +5,18 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency } from '../utils/currency';
 import type { RecurringReminder } from '../types';
 
-interface ReminderNotificationBadgeProps {
-  groupId: string | null;
-}
-
-export default function ReminderNotificationBadge({ groupId }: ReminderNotificationBadgeProps) {
+export default function ReminderNotificationBadge() {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch reminders
+  // Fetch ALL reminders across all user's groups
   const { data: reminders = [] } = useQuery({
-    queryKey: ['reminders', groupId],
+    queryKey: ['reminders', 'all'],
     queryFn: async () => {
-      if (!groupId) return [];
-      const response = await reminderApi.getAll(groupId);
+      const response = await reminderApi.getAll(); // No groupId = all groups
       return response.data;
     },
-    enabled: !!groupId,
   });
 
   // Close dropdown when clicking outside
@@ -72,7 +66,7 @@ export default function ReminderNotificationBadge({ groupId }: ReminderNotificat
 
   const totalNotifications = upcomingReminders.length + overdueReminders.length;
 
-  if (!groupId || totalNotifications === 0) {
+  if (totalNotifications === 0) {
     return null;
   }
 
@@ -117,6 +111,9 @@ export default function ReminderNotificationBadge({ groupId }: ReminderNotificat
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <p className="font-medium text-gray-900 text-sm">{reminder.title}</p>
+                          {reminder.group && (
+                            <p className="text-xs text-gray-500 mt-0.5">📍 {reminder.group.name}</p>
+                          )}
                           <p className="text-xs text-red-700 font-semibold mt-1">
                             {getDueDateLabel(reminder.nextDueDate)}
                           </p>
@@ -156,6 +153,9 @@ export default function ReminderNotificationBadge({ groupId }: ReminderNotificat
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <p className="font-medium text-gray-900 text-sm">{reminder.title}</p>
+                            {reminder.group && (
+                              <p className="text-xs text-gray-500 mt-0.5">📍 {reminder.group.name}</p>
+                            )}
                             <p className={`text-xs mt-1 ${
                               isUrgent ? 'text-yellow-800 font-semibold' : 'text-gray-600'
                             }`}>

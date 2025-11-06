@@ -3,6 +3,12 @@ export interface User {
   name: string;
   email: string;
   role?: string;
+  picture?: string;
+  iban?: string;
+  phone?: string;
+  bio?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Group {

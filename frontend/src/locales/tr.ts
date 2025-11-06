@@ -6,6 +6,7 @@ export const tr = {
     analytics: 'Analiz',
     auditLogs: 'Denetim Kayıtları',
     admin: 'Yönetim',
+    profile: 'Profil',
     logout: 'Çıkış Yap',
   },
 
@@ -760,6 +761,55 @@ export const tr = {
     create: 'Oluştur',
     close: 'Kapat',
     back: 'Geri',
+  },
+
+  // Profile Page
+  profile: {
+    title: 'Profilim',
+    subtitle: 'Profil bilgilerinizi yönetin',
+    backToHome: '← Ana Sayfaya Dön',
+    personalInfo: 'Kişisel Bilgiler',
+    paymentInfo: 'Ödeme Bilgileri',
+    accountInfo: 'Hesap Bilgileri',
+    loading: 'Profil yükleniyor...',
+    updateSuccess: 'Profil başarıyla güncellendi!',
+    updateError: 'Profil güncellenemedi',
+    
+    fields: {
+      name: 'Ad Soyad',
+      namePlaceholder: 'Adınızı girin',
+      email: 'E-posta',
+      emailReadonly: 'E-posta değiştirilemez (Google hesabınızdan gelir)',
+      iban: 'IBAN',
+      ibanPlaceholder: 'TR00 0000 0000 0000 0000 0000 00',
+      ibanHelp: 'IBAN numaranızı girerek grup arkadaşlarınızın size ödeme yapmasını kolaylaştırın',
+      phone: 'Telefon',
+      phonePlaceholder: '+90 XXX XXX XX XX',
+      phoneHelp: 'Telefon numaranız diğer kullanıcılarla paylaşılabilir',
+      bio: 'Hakkımda',
+      bioPlaceholder: 'Kendiniz hakkında kısa bir not...',
+      bioHelp: 'Kısa bir tanıtım yazabilirsiniz (isteğe bağlı)',
+      role: 'Rol',
+      memberSince: 'Üyelik Tarihi',
+    },
+    
+    save: 'Değişiklikleri Kaydet',
+    saving: 'Kaydediliyor...',
+    
+    validation: {
+      nameRequired: 'Ad soyad gereklidir',
+      ibanInvalid: 'Geçerli bir IBAN numarası girin',
+      phoneInvalid: 'Geçerli bir telefon numarası girin',
+    },
+  },
+
+  // Data Table
+  dataTable: {
+    searchPlaceholder: 'Ara...',
+    noData: 'Veri bulunamadı',
+    page: 'Sayfa',
+    of: '/',
+    showing: 'Gösteriliyor',
   },
 };
 

@@ -5,6 +5,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useGroupRole } from '../hooks/useGroupRole';
 import { InviteModal } from './InviteModal';
+import UserProfileModal from './UserProfileModal';
 
 interface GroupMembersProps {
   groupId: string;
@@ -28,6 +29,7 @@ export default function GroupMembers({ groupId, groupName, members }: GroupMembe
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedRole, setSelectedRole] = useState('member');
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: allUsers } = useQuery({
@@ -58,10 +60,10 @@ export default function GroupMembers({ groupId, groupName, members }: GroupMembe
       queryClient.invalidateQueries({ queryKey: ['group', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       // Extract detailed error message if available
-      const errorMessage = error.response?.data?.error || error.message;
-      console.error('Error removing member:', errorMessage, error.response?.data?.details);
+      const errorMessage = (error as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (error as Error).message;
+      console.error('Error removing member:', errorMessage, (error as { response?: { data?: { details?: unknown } } })?.response?.data?.details);
     }
   });
 
@@ -126,7 +128,7 @@ export default function GroupMembers({ groupId, groupName, members }: GroupMembe
               required
             >
               <option value="">{t.members.chooseUser}</option>
-              {availableUsers.map((user: any) => (
+              {availableUsers.map((user: { id: string; name: string; email: string }) => (
                 <option key={user.id} value={user.id}>
                   {user.name} ({user.email})
                 </option>
@@ -177,8 +179,15 @@ export default function GroupMembers({ groupId, groupName, members }: GroupMembe
               className="flex items-center justify-between p-3 border rounded hover:bg-gray-50"
             >
               <div className="flex-1 min-w-0 mr-2">
-                <h4 className="font-medium text-sm sm:text-base truncate">{member.user.name}</h4>
-                <p className="text-xs sm:text-sm text-gray-600 truncate">{member.user.email}</p>
+                <button
+                  onClick={() => setProfileUserId(member.user.id)}
+                  className="text-left w-full"
+                >
+                  <h4 className="font-medium text-sm sm:text-base truncate text-indigo-600 hover:text-indigo-800 hover:underline">
+                    {member.user.name}
+                  </h4>
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">{member.user.email}</p>
+                </button>
               </div>
               
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -230,7 +239,7 @@ export default function GroupMembers({ groupId, groupName, members }: GroupMembe
         <div className="text-red-500 text-xs sm:text-sm mt-2 p-3 bg-red-50 rounded">
           <p className="font-semibold">{t.members.errorRemovingMember}:</p>
           <p className="mt-1">
-            {(removeMemberMutation.error as any)?.response?.data?.error || 
+            {(removeMemberMutation.error as { response?: { data?: { error?: string } } })?.response?.data?.error || 
              (removeMemberMutation.error as Error).message}
           </p>
         </div>
@@ -240,6 +249,14 @@ export default function GroupMembers({ groupId, groupName, members }: GroupMembe
         <p className="text-red-500 text-xs sm:text-sm mt-2">
           {t.members.errorUpdatingRole}: {(updateRoleMutation.error as Error).message}
         </p>
+      )}
+
+      {/* User Profile Modal */}
+      {profileUserId && (
+        <UserProfileModal 
+          userId={profileUserId} 
+          onClose={() => setProfileUserId(null)} 
+        />
       )}
     </div>
   );

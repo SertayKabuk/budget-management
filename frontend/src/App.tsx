@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -15,6 +15,7 @@ import UserRoleManagementPage from './pages/UserRoleManagementPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import InviteAcceptPage from './pages/InviteAcceptPage';
+import ProfilePage from './pages/ProfilePage';
 
 const queryClient = new QueryClient();
 
@@ -22,31 +23,6 @@ function AppContent() {
   const { user, logout, isAuthenticated, isAdmin, isAnyGroupAdmin } = useAuth();
   const { t } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-
-  // Listen for group selection changes from localStorage
-  useEffect(() => {
-    const storedGroupId = localStorage.getItem('selectedGroupId');
-    if (storedGroupId) {
-      setSelectedGroupId(storedGroupId);
-    }
-
-    // Listen for storage changes
-    const handleStorageChange = () => {
-      const newGroupId = localStorage.getItem('selectedGroupId');
-      setSelectedGroupId(newGroupId);
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Custom event for same-tab updates
-    window.addEventListener('groupSelectionChanged', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('groupSelectionChanged', handleStorageChange);
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -72,6 +48,12 @@ function AppContent() {
                   >
                     📜 {t.nav.auditLogs}
                   </Link>
+                  <Link 
+                    to="/profile" 
+                    className="flex items-center px-2 py-2 text-gray-600 hover:text-gray-900 text-sm"
+                  >
+                    👤 {t.nav.profile}
+                  </Link>
                   {(isAdmin || isAnyGroupAdmin) && (
                     <Link 
                       to="/admin" 
@@ -86,8 +68,8 @@ function AppContent() {
             
             {isAuthenticated && (
               <div className="flex items-center gap-2 sm:gap-4">
-                {/* Reminder Notification Badge */}
-                <ReminderNotificationBadge groupId={selectedGroupId} />
+                {/* Reminder Notification Badge - Shows all groups' reminders */}
+                <ReminderNotificationBadge />
                 
                 {/* Desktop User Info */}
                 <div className="hidden sm:flex items-center gap-3">
@@ -151,6 +133,13 @@ function AppContent() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 📜 {t.nav.auditLogs}
+              </Link>
+              <Link
+                to="/profile"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                👤 {t.nav.profile}
               </Link>
               {(isAdmin || isAnyGroupAdmin) && (
                 <Link
@@ -224,6 +213,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <AuditLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
               </ProtectedRoute>
             }
           />

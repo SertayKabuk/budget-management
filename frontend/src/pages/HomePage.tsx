@@ -233,8 +233,8 @@ export default function HomePage() {
 
       {selectedGroupId && group && user && (
         <>
-          {/* Reminder Alert Banner */}
-          <ReminderAlertBanner groupId={selectedGroupId} />
+          {/* Reminder Alert Banner - Shows all groups' urgent reminders */}
+          <ReminderAlertBanner />
 
           {/* Group Spending Summary */}
           <div className="mb-4 sm:mb-6">

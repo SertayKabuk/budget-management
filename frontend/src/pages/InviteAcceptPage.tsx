@@ -41,8 +41,8 @@ export default function InviteAcceptPage() {
         navigate('/');
       }
     },
-    onError: (err: any) => {
-      const errorMsg = err.response?.data?.error || err.message || 'Daveti kabul ederken bir hata oluştu';
+    onError: (err: unknown) => {
+      const errorMsg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error).message || 'Daveti kabul ederken bir hata oluştu';
       setError(errorMsg);
     },
   });
@@ -83,7 +83,7 @@ export default function InviteAcceptPage() {
   }
 
   if (fetchError || !invite) {
-    const errorMessage = (fetchError as any)?.response?.data?.error || t.inviteAccept.invalidMessage;
+    const errorMessage = (fetchError as { response?: { data?: { error?: string } } })?.response?.data?.error || t.inviteAccept.invalidMessage;
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">

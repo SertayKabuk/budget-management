@@ -1,15 +1,28 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { createColumnHelper } from '@tanstack/react-table';
 import { groupApi, userApi } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import DataTable from '../components/DataTable';
+import UserProfileModal from '../components/UserProfileModal';
 import type { Group, User } from '../types';
+
+type GroupWithDetails = Group & { 
+  members?: Array<{ userId: string; role: string }>;
+  _count?: { expenses?: number };
+};
+
+type UserWithDetails = User & {
+  _count?: { expenses?: number };
+};
 
 export default function AdminPage() {
   const { t } = useTranslation();
   const { user, isAdmin: isGlobalAdmin } = useAuth();
   const [showNewGroup, setShowNewGroup] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const { data: allGroups, refetch: refetchGroups } = useQuery({
     queryKey: ['groups'],
@@ -20,12 +33,14 @@ export default function AdminPage() {
   });
 
   // Filter groups based on admin level
-  const groups = allGroups?.filter((group: Group & { members?: Array<{ userId: string; role: string }> }) => {
-    if (isGlobalAdmin) return true; // Global admins see all groups
-    
-    // Group admins only see groups where they are admin
-    return group.members?.some(m => m.userId === user?.id && m.role === 'admin');
-  });
+  const groups = useMemo(() => 
+    allGroups?.filter((group: GroupWithDetails) => {
+      if (isGlobalAdmin) return true; // Global admins see all groups
+      
+      // Group admins only see groups where they are admin
+      return group.members?.some(m => m.userId === user?.id && m.role === 'admin');
+    }) || []
+  , [allGroups, isGlobalAdmin, user?.id]);
 
   const { data: users } = useQuery({
     queryKey: ['users'],
@@ -51,6 +66,106 @@ export default function AdminPage() {
       console.error('Error creating group:', error);
     }
   };
+
+  // Define columns for Groups table
+  const groupColumnHelper = createColumnHelper<GroupWithDetails>();
+  const groupColumns = useMemo(() => [
+    groupColumnHelper.accessor('name', {
+      header: t.admin.groups.title,
+      cell: (info) => (
+        <div>
+          <h3 className="font-medium text-gray-900">{info.getValue()}</h3>
+          {info.row.original.description && (
+            <p className="text-xs text-gray-600 mt-1">{info.row.original.description}</p>
+          )}
+        </div>
+      ),
+    }),
+    groupColumnHelper.accessor('members', {
+      header: t.admin.groups.members,
+      cell: (info) => (
+        <span className="text-gray-700">
+          {info.getValue()?.length || 0} {t.admin.groups.members}
+        </span>
+      ),
+      enableSorting: true,
+      sortingFn: (rowA, rowB) => {
+        const a = rowA.original.members?.length || 0;
+        const b = rowB.original.members?.length || 0;
+        return a - b;
+      },
+    }),
+    groupColumnHelper.accessor('_count.expenses', {
+      header: t.admin.groups.expenses,
+      cell: (info) => (
+        <span className="text-gray-700">
+          {info.getValue() || 0} {t.admin.groups.expenses}
+        </span>
+      ),
+    }),
+    groupColumnHelper.display({
+      id: 'actions',
+      header: t.admin.groups.details,
+      cell: (info) => (
+        <Link
+          to={`/group/${info.row.original.id}`}
+          className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded inline-block"
+        >
+          {t.admin.groups.details}
+        </Link>
+      ),
+    }),
+  ], [groupColumnHelper, t]);
+
+  // Define columns for Users table
+  const userColumnHelper = createColumnHelper<UserWithDetails>();
+  const userColumns = useMemo(() => [
+    userColumnHelper.accessor('name', {
+      header: t.admin.users.title,
+      cell: (info) => (
+        <div className="flex items-center">
+          <div className="flex-shrink-0 h-10 w-10">
+            <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+              <span className="text-indigo-600 font-semibold text-sm">
+                {info.getValue().charAt(0).toUpperCase()}
+              </span>
+            </div>
+          </div>
+          <div className="ml-4">
+            <button
+              onClick={() => setSelectedUserId(info.row.original.id)}
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline text-left"
+            >
+              {info.getValue()}
+            </button>
+            <div className="text-xs text-gray-600">{info.row.original.email}</div>
+          </div>
+        </div>
+      ),
+    }),
+    userColumnHelper.accessor('_count.expenses', {
+      header: t.admin.users.expenses,
+      cell: (info) => (
+        <span className="text-gray-700">
+          {info.getValue() || 0} {t.admin.users.expenses}
+        </span>
+      ),
+    }),
+    userColumnHelper.accessor('role', {
+      header: 'Rol',
+      cell: (info) => (
+        <span
+          className={`px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
+            info.getValue() === 'admin'
+              ? 'bg-purple-100 text-purple-800'
+              : 'bg-gray-100 text-gray-800'
+          }`}
+        >
+          {info.getValue() || 'user'}
+        </span>
+      ),
+    }),
+  ], [userColumnHelper, t]);
 
   return (
     <div className="px-3 sm:px-4 py-4 sm:py-6">
@@ -91,7 +206,7 @@ export default function AdminPage() {
 
       <div className={`grid grid-cols-1 ${isGlobalAdmin ? 'lg:grid-cols-2' : ''} gap-4 sm:gap-6`}>
         {/* Groups Section */}
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
             <h2 className="text-lg sm:text-xl font-semibold">{t.admin.groups.title}</h2>
             <button
@@ -132,36 +247,18 @@ export default function AdminPage() {
             </form>
           )}
 
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {groups?.map((group: Group & { members?: unknown[]; _count?: { expenses?: number } }) => (
-              <div key={group.id} className="relative p-3 sm:p-4 border rounded hover:bg-gray-50">
-                <h3 className="font-medium text-sm sm:text-base pr-16">{group.name}</h3>
-                {group.description && (
-                  <p className="text-xs sm:text-sm text-gray-600 mt-1">{group.description}</p>
-                )}
-                <div className="flex gap-2 mt-2 text-xs text-gray-500">
-                  <span>{group.members?.length || 0} {t.admin.groups.members}</span>
-                  <span>•</span>
-                  <span>{group._count?.expenses || 0} {t.admin.groups.expenses}</span>
-                </div>
-                <Link
-                  to={`/group/${group.id}`}
-                  className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 sm:px-3 py-1 rounded"
-                  title={t.admin.groups.details}
-                >
-                  {t.admin.groups.details}
-                </Link>
-              </div>
-            ))}
-            {(!groups || groups.length === 0) && (
-              <p className="text-center text-gray-500 py-8 text-sm sm:text-base">{t.admin.groups.noGroups}</p>
-            )}
-          </div>
+          <DataTable
+            data={groups}
+            columns={groupColumns}
+            searchPlaceholder="Grup ara..."
+            emptyMessage={t.admin.groups.noGroups}
+            pageSize={8}
+          />
         </div>
 
         {/* Users Section - Only for Global Admins */}
         {isGlobalAdmin && (
-          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <div>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
               <h2 className="text-lg sm:text-xl font-semibold">{t.admin.users.title}</h2>
               <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full sm:w-auto">
@@ -177,36 +274,24 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {users?.map((user: User & { _count?: { expenses?: number } }) => (
-                <div key={user.id} className="p-3 sm:p-4 border rounded hover:bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-sm sm:text-base truncate">{user.name}</h3>
-                      <p className="text-xs sm:text-sm text-gray-600 truncate">{user.email}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {user._count?.expenses || 0} {t.admin.users.expenses}
-                      </p>
-                    </div>
-                    <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
-                        user.role === 'admin'
-                          ? 'bg-purple-100 text-purple-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {user.role || 'user'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {(!users || users.length === 0) && (
-                <p className="text-center text-gray-500 py-8 text-sm sm:text-base">{t.admin.users.noUsers}</p>
-              )}
-            </div>
+            <DataTable
+              data={users || []}
+              columns={userColumns}
+              searchPlaceholder="Kullanıcı ara..."
+              emptyMessage={t.admin.users.noUsers}
+              pageSize={8}
+            />
           </div>
         )}
       </div>
+
+      {/* User Profile Modal */}
+      {selectedUserId && (
+        <UserProfileModal
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+        />
+      )}
     </div>
   );
 }

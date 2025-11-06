@@ -7,6 +7,7 @@ import { formatCurrency } from '../utils/currency';
 import type { Expense, Payment } from '../types';
 import AuthenticatedImage from './AuthenticatedImage';
 import { UserSpendingItem } from './OptimizedSpendingComponents';
+import UserProfileModal from './UserProfileModal';
 
 interface GroupSpendingSummaryProps {
   groupId: string;
@@ -29,8 +30,12 @@ interface MonthlyData {
 }
 
 interface DebtSettlement {
+  fromUserId: string;
   from: string;
+  fromIban?: string;
+  toUserId: string;
   to: string;
+  toIban?: string;
   amount: number;
 }
 
@@ -45,6 +50,7 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('currentMonth');
   const [viewMode, setViewMode] = useState<ViewMode>('summary');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
   const { data: allExpenses, isLoading } = useQuery({
     queryKey: ['expenses', groupId],
@@ -52,16 +58,16 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
       try {
         const response = await expenseApi.getAll(groupId);
         return response.data;
-      } catch (error: any) {
-        if (error?.response?.status === 403) {
+      } catch (error: unknown) {
+        if ((error as { response?: { status?: number } })?.response?.status === 403) {
           return [];
         }
         throw error;
       }
     },
     enabled: !!groupId,
-    retry: (failureCount, error: any) => {
-      if (error?.response?.status === 403) return false;
+    retry: (failureCount, error: unknown) => {
+      if ((error as { response?: { status?: number } })?.response?.status === 403) return false;
       return failureCount < 2;
     },
   });
@@ -73,16 +79,16 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
       try {
         const response = await groupApi.getMembers(groupId);
         return response.data;
-      } catch (error: any) {
-        if (error?.response?.status === 403) {
+      } catch (error: unknown) {
+        if ((error as { response?: { status?: number } })?.response?.status === 403) {
           return [];
         }
         throw error;
       }
     },
     enabled: !!groupId,
-    retry: (failureCount, error: any) => {
-      if (error?.response?.status === 403) return false;
+    retry: (failureCount, error: unknown) => {
+      if ((error as { response?: { status?: number } })?.response?.status === 403) return false;
       return failureCount < 2;
     },
   });
@@ -94,16 +100,16 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
       try {
         const response = await paymentApi.getAll(groupId);
         return response.data;
-      } catch (error: any) {
-        if (error?.response?.status === 403) {
+      } catch (error: unknown) {
+        if ((error as { response?: { status?: number } })?.response?.status === 403) {
           return [];
         }
         throw error;
       }
     },
     enabled: !!groupId,
-    retry: (failureCount, error: any) => {
-      if (error?.response?.status === 403) return false;
+    retry: (failureCount, error: unknown) => {
+      if ((error as { response?: { status?: number } })?.response?.status === 403) return false;
       return failureCount < 2;
     },
   });
@@ -215,13 +221,17 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
   const debtSettlements = useMemo(() => {
     if (!expenses || expenses.length === 0 || !groupMembers || groupMembers.length === 0) return [];
 
-    // Get all group members and their spending
-    const usersMap = new Map<string, { name: string; spent: number }>();
+    // Get all group members and their spending + IBAN
+    const usersMap = new Map<string, { name: string; spent: number; iban?: string }>();
     
     // Initialize all group members with 0 spending
     groupMembers.forEach((member) => {
       if (member.user) {
-        usersMap.set(member.user.id, { name: member.user.name, spent: 0 });
+        usersMap.set(member.user.id, { 
+          name: member.user.name, 
+          spent: 0,
+          iban: member.user.iban 
+        });
       }
     });
 
@@ -236,6 +246,7 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
     const users = Array.from(usersMap.entries()).map(([id, data]) => ({
       userId: id,
       userName: data.name,
+      userIban: data.iban,
       spent: data.spent
     }));
 
@@ -249,6 +260,7 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
     const balances = users.map(u => ({
       userId: u.userId,
       userName: u.userName,
+      userIban: u.userIban,
       balance: u.spent - fairShare
     }));
 
@@ -288,8 +300,12 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
       
       if (amount > 0.01) {
         settlements.push({
+          fromUserId: debtor.userId,
           from: debtor.userName,
+          fromIban: debtor.userIban,
+          toUserId: creditor.userId,
           to: creditor.userName,
+          toIban: creditor.userIban,
           amount: amount
         });
       }
@@ -574,7 +590,12 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
                         return (
                           <div key={userSpending.userId} className="bg-white rounded-lg p-3 border border-gray-200">
                             <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium text-gray-900 text-sm">{userSpending.userName}</span>
+                              <button
+                                onClick={() => setProfileUserId(userSpending.userId)}
+                                className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline text-sm"
+                              >
+                                {userSpending.userName}
+                              </button>
                               <span className="font-semibold text-gray-900 text-sm">{formatCurrency(userSpending.total)}</span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -612,10 +633,10 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
           </div>
 
           {debtSettlements.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {debtSettlements.map((settlement, index) => (
                 <div key={index} className="bg-white border-l-4 border-green-500 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3 flex-1">
                       <div className="bg-red-100 text-red-700 rounded-full px-3 py-1 text-sm font-medium">
                         {settlement.from}
@@ -629,6 +650,38 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
                       {formatCurrency(settlement.amount)}
                     </div>
                   </div>
+
+                  {/* IBAN Info */}
+                  {settlement.toIban && (
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 mt-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-gray-600 mb-1">
+                            💳 {settlement.to} IBAN
+                          </p>
+                          <p className="text-sm font-mono font-medium text-gray-900 break-all">
+                            {settlement.toIban}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(settlement.toIban!);
+                            alert('IBAN kopyalandı!');
+                          }}
+                          className="flex-shrink-0 px-3 py-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium whitespace-nowrap"
+                        >
+                          📋 Kopyala
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!settlement.toIban && (
+                    <p className="text-xs text-gray-500 italic mt-2">
+                      ℹ️ {settlement.to} henüz IBAN bilgisi eklememiş
+                    </p>
+                  )}
+
                   <div className="text-xs text-gray-500 mt-2">
                     {t.spending.settlement.paymentInstruction
                       .replace('{from}', settlement.from)
@@ -656,6 +709,14 @@ export default function GroupSpendingSummary({ groupId }: GroupSpendingSummaryPr
             </div>
           )}
         </div>
+      )}
+
+      {/* User Profile Modal */}
+      {profileUserId && (
+        <UserProfileModal 
+          userId={profileUserId} 
+          onClose={() => setProfileUserId(null)} 
+        />
       )}
     </div>
     </>

@@ -6,6 +6,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { formatCurrency } from '../utils/currency';
 import { useAuth } from '../contexts/AuthContext';
 import { useGroupRole } from '../hooks/useGroupRole';
+import UserProfileModal from './UserProfileModal';
 
 interface Props {
   groupId: string;
@@ -33,6 +34,7 @@ export default function ExpenseList({ groupId }: Props) {
   const [selectedImageBlob, setSelectedImageBlob] = useState<string | null>(null);
   const [editingExpense, setEditingExpense] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ amount: 0, description: '', category: '', date: '' });
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // Fetch authenticated image when selectedImage changes
   useEffect(() => {
@@ -559,7 +561,12 @@ export default function ExpenseList({ groupId }: Props) {
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {expense.user.name}
+                      <button
+                        onClick={() => setSelectedUserId(expense.user.id)}
+                        className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium"
+                      >
+                        {expense.user.name}
+                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                       <input
@@ -609,7 +616,12 @@ export default function ExpenseList({ groupId }: Props) {
                       {expense.category || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {expense.user.name}
+                      <button
+                        onClick={() => setSelectedUserId(expense.user.id)}
+                        className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium"
+                      >
+                        {expense.user.name}
+                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
                       {formatCurrency(expense.amount)}
@@ -738,7 +750,12 @@ export default function ExpenseList({ groupId }: Props) {
                   </div>
                 </div>
                 <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
-                  <span>{expense.user.name}</span>
+                  <button
+                    onClick={() => setSelectedUserId(expense.user.id)}
+                    className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium"
+                  >
+                    {expense.user.name}
+                  </button>
                   <span>{new Date(expense.date).toLocaleDateString()}</span>
                 </div>
                 {(expense.user.id === user?.id || isGroupAdmin || isGlobalAdmin) && (
@@ -771,6 +788,14 @@ export default function ExpenseList({ groupId }: Props) {
         </div>
       </div>
     </div>
+
+    {/* User Profile Modal */}
+    {selectedUserId && (
+      <UserProfileModal 
+        userId={selectedUserId} 
+        onClose={() => setSelectedUserId(null)} 
+      />
+    )}
     </>
   );
 }

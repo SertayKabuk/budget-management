@@ -5,7 +5,10 @@ import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT secret is not defined in environment variables.');
+}
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Generate JWT token

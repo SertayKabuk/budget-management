@@ -5,7 +5,7 @@ import { saveBase64Image } from '../utils/fileUtils';
 import prisma from '../prisma';
 import { convertDecimalsToNumbers } from '../utils/decimalUtils';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
  * WebSocket Events:
@@ -533,6 +533,10 @@ export function setupWebSocket(io: Server) {
     
     if (!token) {
       return next(new Error('Authentication error: No token provided'));
+    }
+
+    if (!JWT_SECRET) {
+      throw new Error('JWT secret is not defined in environment variables.');
     }
 
     try {

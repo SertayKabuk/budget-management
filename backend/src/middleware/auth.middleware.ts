@@ -27,7 +27,11 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   }
 
   try {
-    const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+    const secret = process.env.JWT_SECRET;
+
+    if (!secret) {
+      throw new Error('JWT secret is not defined in environment variables.');
+    }
     const decoded = jwt.verify(token, secret) as JWTUser;
     req.jwtUser = decoded;
     
@@ -35,7 +39,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     setAuditContext({
       userId: decoded.id,
       userName: decoded.name,
-      ipAddress: req.ip || req.connection?.remoteAddress,
+      ipAddress: req.ip || req.socket?.remoteAddress,
       userAgent: req.headers['user-agent'],
     });
     
@@ -63,7 +67,10 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction) =>
 
   if (token) {
     try {
-      const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        throw new Error('JWT secret is not defined in environment variables.');
+      }
       const decoded = jwt.verify(token, secret) as JWTUser;
       req.jwtUser = decoded;
       

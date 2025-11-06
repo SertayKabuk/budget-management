@@ -1,15 +1,24 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { createColumnHelper } from '@tanstack/react-table';
 import { userApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
+import DataTable from '../components/DataTable';
+import UserProfileModal from '../components/UserProfileModal';
+import type { User } from '../types';
+
+type UserWithDetails = User & {
+  _count?: { expenses?: number };
+};
 
 export default function UserRoleManagementPage() {
   const { user: currentUser } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
@@ -42,6 +51,90 @@ export default function UserRoleManagementPage() {
     }
   };
 
+  // Define columns for Users table
+  const columnHelper = createColumnHelper<UserWithDetails>();
+  const columns = useMemo(() => [
+    columnHelper.accessor('name', {
+      header: t.userRoles.table.user,
+      cell: (info) => (
+        <div className="flex items-center">
+          <div className="flex-shrink-0 h-10 w-10">
+            <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+              <span className="text-indigo-600 font-semibold text-sm">
+                {info.getValue().charAt(0).toUpperCase()}
+              </span>
+            </div>
+          </div>
+          <div className="ml-4">
+            <button
+              onClick={() => setSelectedUserId(info.row.original.id)}
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline text-left"
+            >
+              {info.getValue()}
+            </button>
+            {info.row.original.id === currentUser?.id && (
+              <div className="text-xs text-gray-500">{t.userRoles.table.you}</div>
+            )}
+          </div>
+        </div>
+      ),
+    }),
+    columnHelper.accessor('email', {
+      header: t.userRoles.table.email,
+      cell: (info) => (
+        <div className="text-sm text-gray-900">{info.getValue()}</div>
+      ),
+    }),
+    columnHelper.accessor('role', {
+      header: t.userRoles.table.currentRole,
+      cell: (info) => (
+        <span
+          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+            info.getValue() === 'admin'
+              ? 'bg-purple-100 text-purple-800'
+              : 'bg-gray-100 text-gray-800'
+          }`}
+        >
+          {info.getValue() === 'admin' ? t.userRoles.roles.admin : t.userRoles.roles.user}
+        </span>
+      ),
+    }),
+    columnHelper.display({
+      id: 'actions',
+      header: t.userRoles.table.actions,
+      cell: (info) => {
+        const user = info.row.original;
+        if (user.id === currentUser?.id) {
+          return (
+            <span className="text-gray-400 text-sm">{t.userRoles.table.cannotModify}</span>
+          );
+        }
+        return (
+          <div className="flex gap-2">
+            {user.role !== 'admin' && (
+              <button
+                onClick={() => handleRoleChange(user.id, 'admin')}
+                disabled={updateRoleMutation.isPending}
+                className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t.userRoles.table.makeAdmin}
+              </button>
+            )}
+            {user.role === 'admin' && (
+              <button
+                onClick={() => handleRoleChange(user.id, 'user')}
+                disabled={updateRoleMutation.isPending}
+                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t.userRoles.table.removeAdmin}
+              </button>
+            )}
+          </div>
+        );
+      },
+    }),
+  ], [columnHelper, t, currentUser, updateRoleMutation.isPending]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -72,150 +165,13 @@ export default function UserRoleManagementPage() {
         </div>
       )}
 
-      {/* Desktop Table View - Hidden on Mobile */}
-      <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                {t.userRoles.table.user}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                {t.userRoles.table.email}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                {t.userRoles.table.currentRole}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                {t.userRoles.table.actions}
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {users?.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10">
-                      <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                        <span className="text-indigo-600 font-semibold text-sm">
-                          {user.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                      {user.id === currentUser?.id && (
-                        <div className="text-xs text-gray-500">{t.userRoles.table.you}</div>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{user.email}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.role === 'admin'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {user.role === 'admin' ? t.userRoles.roles.admin : t.userRoles.roles.user}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  {user.id === currentUser?.id ? (
-                    <span className="text-gray-400">{t.userRoles.table.cannotModify}</span>
-                  ) : (
-                    <div className="flex gap-2">
-                      {user.role !== 'admin' && (
-                        <button
-                          onClick={() => handleRoleChange(user.id, 'admin')}
-                          disabled={updateRoleMutation.isPending}
-                          className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {t.userRoles.table.makeAdmin}
-                        </button>
-                      )}
-                      {user.role === 'admin' && (
-                        <button
-                          onClick={() => handleRoleChange(user.id, 'user')}
-                          disabled={updateRoleMutation.isPending}
-                          className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {t.userRoles.table.removeAdmin}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile Card View - Visible on Mobile Only */}
-      <div className="md:hidden space-y-3">
-        {users?.map((user) => (
-          <div key={user.id} className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="flex-shrink-0 h-12 w-12">
-                <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
-                  <span className="text-indigo-600 font-semibold">
-                    {user.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-base font-medium text-gray-900 truncate">{user.name}</div>
-                <div className="text-sm text-gray-600 truncate">{user.email}</div>
-                {user.id === currentUser?.id && (
-                  <div className="text-xs text-gray-500 mt-1">{t.userRoles.table.you}</div>
-                )}
-              </div>
-              <span
-                className={`px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
-                  user.role === 'admin'
-                    ? 'bg-purple-100 text-purple-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                {user.role === 'admin' ? t.userRoles.roles.admin : t.userRoles.roles.user}
-              </span>
-            </div>
-            
-            {user.id === currentUser?.id ? (
-              <div className="text-sm text-gray-400 text-center py-2 border-t">
-                {t.userRoles.table.cannotModify}
-              </div>
-            ) : (
-              <div className="flex gap-2 pt-3 border-t">
-                {user.role !== 'admin' && (
-                  <button
-                    onClick={() => handleRoleChange(user.id, 'admin')}
-                    disabled={updateRoleMutation.isPending}
-                    className="flex-1 px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                  >
-                    {t.userRoles.table.makeAdmin}
-                  </button>
-                )}
-                {user.role === 'admin' && (
-                  <button
-                    onClick={() => handleRoleChange(user.id, 'user')}
-                    disabled={updateRoleMutation.isPending}
-                    className="flex-1 px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                  >
-                    {t.userRoles.table.removeAdmin}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      <DataTable
+        data={users || []}
+        columns={columns}
+        searchPlaceholder="Kullanıcı ara (ad, email)..."
+        emptyMessage="Kullanıcı bulunamadı"
+        pageSize={10}
+      />
 
       <div className="mt-4 sm:mt-6 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
         <h3 className="font-semibold text-blue-900 mb-2 text-sm sm:text-base">{t.userRoles.about.title}</h3>
@@ -224,6 +180,14 @@ export default function UserRoleManagementPage() {
           <li><strong>{t.userRoles.roles.admin.charAt(0).toUpperCase() + t.userRoles.roles.admin.slice(1)}:</strong> {t.userRoles.about.adminDescription}</li>
         </ul>
       </div>
+
+      {/* User Profile Modal */}
+      {selectedUserId && (
+        <UserProfileModal
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+        />
+      )}
     </div>
   );
 }

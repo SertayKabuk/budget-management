@@ -328,7 +328,7 @@ router.get('/:id/members', async (req: Request, res: Response) => {
     const members = await prisma.groupMember.findMany({
       where: { groupId: id },
       include: {
-        user: { select: { id: true, name: true, email: true } }
+        user: { select: { id: true, name: true, email: true, iban: true, phone: true, picture: true } }
       }
     });
 
