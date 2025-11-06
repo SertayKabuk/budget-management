@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { userApi } from '../services/api';
 import type { User } from '../types';
 
@@ -15,11 +15,7 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadProfile();
-  }, [userId]);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -31,7 +27,11 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';

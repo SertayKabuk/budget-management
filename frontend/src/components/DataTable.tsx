@@ -14,6 +14,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 
 interface DataTableProps<TData> {
   data: TData[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   columns: ColumnDef<TData, any>[];
   searchPlaceholder?: string;
   searchable?: boolean;

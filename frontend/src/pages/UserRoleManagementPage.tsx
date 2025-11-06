@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -43,13 +43,13 @@ export default function UserRoleManagementPage() {
     },
   });
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
+  const handleRoleChange = useCallback(async (userId: string, newRole: string) => {
     const roleText = newRole === 'admin' ? t.userRoles.roles.admin : t.userRoles.roles.user;
     const confirmMsg = t.userRoles.confirmChange.replace('{role}', roleText);
     if (window.confirm(confirmMsg)) {
       updateRoleMutation.mutate({ userId, role: newRole });
     }
-  };
+  }, [t.userRoles.roles.admin, t.userRoles.roles.user, t.userRoles.confirmChange, updateRoleMutation]);
 
   // Define columns for Users table
   const columnHelper = createColumnHelper<UserWithDetails>();
@@ -133,7 +133,7 @@ export default function UserRoleManagementPage() {
         );
       },
     }),
-  ], [columnHelper, t, currentUser, updateRoleMutation.isPending]);
+  ], [columnHelper, t, currentUser, updateRoleMutation.isPending, handleRoleChange]);
 
   if (isLoading) {
     return (
