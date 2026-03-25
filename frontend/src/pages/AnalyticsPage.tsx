@@ -21,6 +21,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
+import type { PieLabelRenderProps } from 'recharts';
 import { formatCurrency } from '../utils/currency';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
@@ -1122,7 +1123,7 @@ export default function AnalyticsPage() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={(entry: Record<string, unknown>) => 
+                        label={(entry: PieLabelRenderProps) => 
                           `${entry.name}: ${((entry.percent as number) * 100).toFixed(0)}%`
                         }
                         outerRadius={80}
@@ -1201,7 +1202,7 @@ export default function AnalyticsPage() {
                                 cx="50%"
                                 cy="50%"
                                 labelLine={false}
-                                label={(entry: Record<string, unknown>) => 
+                                label={(entry: PieLabelRenderProps) => 
                                   `${entry.name}: ${entry.value}`
                                 }
                                 outerRadius={80}
@@ -1233,9 +1234,9 @@ export default function AnalyticsPage() {
                               <XAxis dataKey="date" />
                               <YAxis />
                               <Tooltip 
-                                formatter={(value: number | string, name: string) => [
-                                  name === 'amount' ? formatCurrency(Number(value)) : value,
-                                  name === 'amount' ? t.analytics.charts.amount : name
+                                formatter={(value, name) => [
+                                  name === 'amount' ? formatCurrency(Number(value ?? 0)) : String(value ?? ''),
+                                  name === 'amount' ? t.analytics.charts.amount : String(name ?? '')
                                 ]} 
                               />
                               <Legend />
@@ -1341,7 +1342,7 @@ export default function AnalyticsPage() {
                                 cx="50%"
                                 cy="50%"
                                 labelLine={false}
-                                label={(entry: Record<string, unknown>) => 
+                                label={(entry: PieLabelRenderProps) => 
                                   `${entry.name}: ${entry.value}`
                                 }
                                 outerRadius={80}

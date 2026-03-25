@@ -1,4 +1,4 @@
-import { Decimal } from '@prisma/client/runtime/library';
+import { Prisma } from '@prisma/client';
 
 /**
  * Recursively converts Prisma Decimal objects to JavaScript numbers in a data structure.
@@ -14,8 +14,8 @@ export function convertDecimalsToNumbers<T>(obj: T): T {
   }
 
   // Handle Decimal instances
-  if (obj instanceof Decimal) {
-    return obj.toNumber() as T;
+  if (obj instanceof Prisma.Decimal) {
+    return (obj as Prisma.Decimal).toNumber() as T;
   }
 
   // Handle Date instances - convert to ISO string
